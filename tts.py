@@ -1,5 +1,4 @@
 import asyncio
-import audioop
 import re
 from typing import Callable, Optional
 from elevenlabs.client import AsyncElevenLabs
