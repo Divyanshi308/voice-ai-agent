@@ -1257,19 +1257,36 @@
         }
 
         .welcome-message .welcome-icon {
-            font-size: 48px;
-            margin-bottom: 12px;
+            font-size: 40px;
+            margin-bottom: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-dim), var(--accent-dim));
+            border: 2px solid var(--border);
+            font-weight: 700;
+            color: var(--primary);
         }
 
         .welcome-message h3 {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 700;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .welcome-message p {
             color: var(--text-dim);
             font-size: 14px;
+            max-width: 400px;
+            margin: 0 auto;
+            line-height: 1.6;
         }
 
         /* ============================================
@@ -2694,9 +2711,20 @@
             box-shadow: 0 4px 32px rgba(255, 68, 68, 0.4);
         }
 
+        .mic-btn.speaking {
+            background: linear-gradient(135deg, #00cc66, #00ff88);
+            animation: speakPulse 1s ease-in-out infinite;
+            box-shadow: 0 4px 32px rgba(0, 204, 102, 0.4);
+        }
+
         @keyframes micPulse {
             0%, 100% { transform: scale(1); box-shadow: 0 4px 32px rgba(255, 68, 68, 0.4); }
             50% { transform: scale(1.08); box-shadow: 0 4px 48px rgba(255, 68, 68, 0.6); }
+        }
+
+        @keyframes speakPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 4px 32px rgba(0, 204, 102, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 4px 48px rgba(0, 204, 102, 0.6); }
         }
 
         .mic-btn svg {
@@ -3052,23 +3080,23 @@
 
                     <div class="chat-messages" id="chatMessages">
                         <div class="welcome-message">
-                            <div class="welcome-icon">👋</div>
-                            <h3>Welcome to Kataru!</h3>
-                            <p>I'm your AI care assistant. Ask me anything or use a quick reply below.</p>
+                            <div class="welcome-icon">語る</div>
+                            <h3>Welcome to Kataru</h3>
+                            <p>Your intelligent AI voice assistant. Type a message or tap the microphone to speak. I can help with questions, tasks, reminders, and more!</p>
                         </div>
                         <div class="message assistant">
-                            <div class="message-text">Hello! I'm Kataru, your AI care assistant. How can I help you today? 😊</div>
+                            <div class="message-text">Hello! I'm Kataru, your AI voice assistant. Ask me anything - from general knowledge to daily tasks. I can also speak my answers aloud!</div>
                             <div class="message-time">Just now</div>
                         </div>
                     </div>
 
                     <div class="quick-replies">
                         <button class="quick-reply" onclick="sendQuickReply('Hello! How are you?')">👋 Hello</button>
-                        <button class="quick-reply" onclick="sendQuickReply('I need my medicine reminder')">💊 Medicine</button>
-                        <button class="quick-reply" onclick="sendQuickReply('Emergency help needed!')">🚨 Emergency</button>
-                        <button class="quick-reply" onclick="sendQuickReply('What is the weather today?')">🌤 Weather</button>
                         <button class="quick-reply" onclick="sendQuickReply('Tell me a joke')">😄 Joke</button>
-                        <button class="quick-reply" onclick="sendQuickReply('Remind me to exercise')">🏃 Exercise</button>
+                        <button class="quick-reply" onclick="sendQuickReply('What can you do?')">✨ Features</button>
+                        <button class="quick-reply" onclick="sendQuickReply('What is the weather today?')">🌤 Weather</button>
+                        <button class="quick-reply" onclick="sendQuickReply('Emergency numbers please')">🚨 Emergency</button>
+                        <button class="quick-reply" onclick="sendQuickReply('Help me with exercise tips')">🏃 Exercise</button>
                     </div>
 
                     <div class="chat-input-area" id="chatInputArea">
@@ -3099,7 +3127,7 @@
                         <div class="voice-transcript" id="voiceTranscript">
                             <span class="voice-transcript-placeholder">Tap the microphone to start speaking</span>
                         </div>
-                        <button class="mic-btn" id="micBtn" onclick="handleMicClick()" title="Start recording">
+                        <button class="mic-btn" id="micBtn" onclick="handleMicClick()" title="Tap to speak">
                             <div class="mic-ring"></div>
                             <div class="mic-ring"></div>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -3109,7 +3137,7 @@
                                 <line x1="8" y1="23" x2="16" y2="23"/>
                             </svg>
                         </button>
-                        <span class="mic-label" id="micLabel">Tap to speak</span>
+                        <span class="mic-label" id="micLabel">Tap the mic to start speaking</span>
                     </div>
                 </div>
             </div>
@@ -4151,6 +4179,11 @@
                 }
 
                 appendMessage('assistant', responseText);
+
+                if (autoSpeakEnabled) {
+                    playVoiceResponse(responseText);
+                }
+
                 finishSending();
 
                 // Store messages
@@ -4166,6 +4199,11 @@
 
                 var fallbackResponse = generateFallbackResponse(text);
                 appendMessage('assistant', fallbackResponse);
+
+                if (autoSpeakEnabled) {
+                    playVoiceResponse(fallbackResponse);
+                }
+
                 finishSending();
 
                 storeChatMessage(userId, currentSessionId, 'user', text);
@@ -4647,6 +4685,7 @@
         var speechRecognition = null;
         var isSpeaking = false;
         var audioChunks = [];
+        var autoSpeakEnabled = true;
 
         /* ============================================
            VOICE MODE TOGGLE
@@ -4934,7 +4973,9 @@
                         currentUser ? currentUser.user_id : 'anonymous',
                         currentSessionId, 'assistant', responseText
                     );
-                    playVoiceResponse(responseText);
+                    if (autoSpeakEnabled) {
+                        playVoiceResponse(responseText);
+                    }
                 }
             }
 
@@ -4996,17 +5037,39 @@
             utterance.pitch = 1;
             utterance.volume = 1;
 
+            var hasHindi = /[\u0900-\u097F]/.test(text);
+            var hindiWords = ["namaste", "kya", "hai", "hain", "aap", "bataiye", "bolo", "samjhi", "dhanyavaad", "main", "tum", "haan", "nahi", "ji", "theek", "chahiye", "alvida", "swagat", "zindagi"];
+            var wordCount = text.toLowerCase().split(/\s+/).filter(function(w) { return hindiWords.indexOf(w) >= 0; }).length;
+            var totalWords = text.split(/\s+/).length;
+            var isHindi = hasHindi || (totalWords > 0 && wordCount / totalWords > 0.3);
+
             var voices = window.speechSynthesis.getVoices();
             if (voices.length > 0) {
-                var preferred = voices.find(function(v) {
-                    return v.lang.startsWith('en');
-                });
-                if (preferred) utterance.voice = preferred;
+                if (isHindi) {
+                    var hindiVoice = voices.find(function(v) { return v.lang === 'hi-IN' || v.lang.startsWith('hi'); });
+                    if (hindiVoice) utterance.voice = hindiVoice;
+                }
+                if (!utterance.voice) {
+                    var preferred = voices.find(function(v) { return v.lang.startsWith('en'); });
+                    if (preferred) utterance.voice = preferred;
+                }
             }
 
-            utterance.onstart = function() { isSpeaking = true; };
-            utterance.onend = function() { isSpeaking = false; };
-            utterance.onerror = function() { isSpeaking = false; };
+            utterance.onstart = function() {
+                isSpeaking = true;
+                var micBtn = document.getElementById('micBtn');
+                if (micBtn) micBtn.classList.add('speaking');
+            };
+            utterance.onend = function() {
+                isSpeaking = false;
+                var micBtn = document.getElementById('micBtn');
+                if (micBtn) micBtn.classList.remove('speaking');
+            };
+            utterance.onerror = function() {
+                isSpeaking = false;
+                var micBtn = document.getElementById('micBtn');
+                if (micBtn) micBtn.classList.remove('speaking');
+            };
 
             window.speechSynthesis.speak(utterance);
         };

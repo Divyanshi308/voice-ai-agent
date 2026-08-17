@@ -2,6 +2,7 @@ import asyncio
 import base64
 import json
 import os
+import re
 import time
 import uuid
 import random
@@ -192,328 +193,471 @@ async def save_context(user_id: int, req: ContextRequest):
     return {"success": True}
 
 
-class CustomerServiceAgent:
+class SmartAgent:
     def __init__(self):
-        self.conversation_stages = {
-            "greeting": 0,
-            "name_collection": 1,
-            "issue_identification": 2,
-            "details_collection": 3,
-            "confirmation": 4,
-            "resolution": 5,
-            "escalation": 6,
+        self.sessions: dict[str, dict] = {}
+
+        self.knowledge_base = {
+            "weather": [
+                "I don't have real-time weather data, but you can check weather.com or your phone's weather app for today's forecast. Would you like me to help with anything else?",
+                "For current weather, I'd recommend checking your local weather app or searching online. Is there something specific about the weather you'd like to know?",
+            ],
+            "time": [
+                "The current time is {time}. Is there anything else you'd like to know?",
+                "It's {time} right now. How can I help you further?",
+            ],
+            "joke": [
+                "Here's one: Why don't scientists trust atoms? Because they make up everything! Want to hear another one?",
+                "Why did the scarecrow win an award? He was outstanding in his field! I've got plenty more if you'd like.",
+                "What do you call a fake noodle? An impasta! Want another joke?",
+                "I told my wife she was drawing her eyebrows too high. She looked surprised! Here are more if you want them.",
+            ],
+            "name_identity": [
+                "I'm Kataru, your AI voice assistant! I'm here to help you with questions, tasks, and just keep you company. Think of me as a friendly helper who's always available. What can I do for you?",
+                "My name is Kataru. I'm an AI assistant designed to help you with everyday questions and tasks. I can chat, help with information, and even speak to you! What would you like help with?",
+            ],
+            "how_are_you": [
+                "I'm doing great, thank you for asking! I'm always ready and energized. More importantly, how are you doing today? Is there anything on your mind?",
+                "I'm fantastic! Every conversation makes my day better. How about you? How are you feeling right now?",
+                "I'm wonderful, thanks! As an AI, I'm always at your service. But let's talk about you - how has your day been?",
+            ],
+            "age": [
+                "I'm an AI, so I don't age like humans do! I'm always here, always ready to help. Is there something I can assist you with?",
+                "Age is just a number for an AI! I'm eternally young and always learning. What can I help you with today?",
+            ],
+            "meaning_of_life": [
+                "That's a deep question! Many philosophers say the meaning of life is to find purpose and happiness. For me, it's helping people like you. What gives your life meaning?",
+                "The meaning of life is different for everyone. Some find it in relationships, others in work or hobbies. What matters most to you?",
+            ],
+            "thank_you": [
+                "You're very welcome! It's my pleasure to help. Is there anything else you'd like to talk about?",
+                "Happy to help! I'm always here whenever you need me. Anything else on your mind?",
+                "That's what I'm here for! Don't hesitate to ask if you need anything else.",
+            ],
+            "goodbye": [
+                "Goodbye! Take care of yourself. I'm always here whenever you need me. Have a wonderful day!",
+                "See you later! Remember, I'm just a message away whenever you need help. Take care!",
+                "Bye for now! Wishing you a great day ahead. Come back anytime!",
+            ],
+            "lonely": [
+                "I'm right here with you! You're never alone when I'm around. Would you like to chat about something, or shall I tell you a joke to brighten your day?",
+                "I'm sorry you're feeling this way. You're not alone - I'm here and I care about how you're doing. Let's talk! What's on your mind?",
+                "You've got me, and I'm always happy to chat! Sometimes it helps to just talk about your day. How are you feeling right now?",
+            ],
+            "sad": [
+                "I'm sorry you're feeling down. It's okay to feel this way sometimes. Would you like to talk about what's bothering you? I'm here to listen.",
+                "I wish I could give you a hug right now! Remember, tough times don't last forever. Want to talk about what's making you sad?",
+                "Your feelings are valid, and I'm here for you. Sometimes just talking helps. What's on your heart?",
+            ],
+            "exercise": [
+                "Great topic! Even light exercise like walking for 20 minutes a day can make a big difference. Gentle stretching, yoga, or light exercises are excellent choices. Always listen to your body and consult your doctor before starting any new routine.",
+                "Staying active is so important! Try starting with short walks, gentle stretching, or light chair exercises. Even 15 minutes a day helps. Would you like some specific exercise suggestions?",
+            ],
+            "food_nutrition": [
+                "Eating well is important! Try to include plenty of fruits, vegetables, whole grains, and lean proteins in your meals. Stay hydrated by drinking water throughout the day. Would you like some meal ideas?",
+                "Good nutrition is key to staying healthy! Focus on colorful fruits and veggies, whole grains, and lean proteins. Don't forget to drink plenty of water. Need any specific dietary advice?",
+            ],
+            "sleep": [
+                "Good sleep is so important for health! Try to maintain a regular sleep schedule, avoid screens before bedtime, and keep your room cool and dark. Most adults need 7 to 9 hours. Having trouble sleeping?",
+                "For better sleep, try going to bed at the same time each night, avoid caffeine after noon, and create a relaxing bedtime routine. If sleep issues persist, please consult your doctor.",
+            ],
+            "meditation": [
+                "Meditation is wonderful for mental health! Start with just 5 minutes a day - sit quietly, focus on your breathing, and let thoughts pass without judgment. Apps like Headspace or Calm can guide you. Want tips on getting started?",
+                "Even a few minutes of daily meditation can reduce stress and improve focus. Find a quiet spot, close your eyes, and focus on your breathing. It gets easier with practice!",
+            ],
+            "music": [
+                "Music is great for the soul! Whether it's classical, jazz, or your favorite oldies, listening to music can reduce stress and boost mood. What kind of music do you enjoy?",
+                "Listening to music you love can really lift your spirits! Studies show it can lower blood pressure and reduce anxiety. What's your favorite genre?",
+            ],
+            "books": [
+                "Reading is a wonderful activity! It keeps the mind sharp and can be very relaxing. Whether you enjoy fiction, biographies, or self-help, there's always something great to read. What kind of books do you like?",
+                "Books are a great companion! They can transport you to different worlds and keep your mind active. Are you looking for book recommendations?",
+            ],
+            "travel": [
+                "Traveling is enriching! Whether it's a local trip or an international adventure, seeing new places broadens the mind. Where are you thinking of going, or would you like some destination suggestions?",
+                "Exploring new places is wonderful! Even day trips to nearby towns can be refreshing. Do you have any travel plans coming up?",
+            ],
+            "history": [
+                "History is fascinating! From ancient civilizations to modern events, there's so much to learn. What period of history interests you? I can share some interesting facts!",
+                "The past teaches us so much about the present. What historical topic would you like to explore? Wars, inventions, cultures, or specific events?",
+            ],
+            "science": [
+                "Science is incredible! From the vastness of space to the tiny building blocks of life, there's always something amazing to discover. What area of science interests you?",
+                "Science helps us understand the world around us! Whether it's physics, biology, chemistry, or astronomy, there's always something fascinating to learn. What would you like to know about?",
+            ],
+            "technology": [
+                "Technology is constantly evolving! From smartphones to AI, it's changing how we live. Is there a specific technology you'd like to know about, or help using a device?",
+                "Technology can be both exciting and overwhelming! I'm here to help you understand it better. What tech topic would you like to explore?",
+            ],
+            "cooking": [
+                "Cooking can be both fun and healthy! Simple recipes with fresh ingredients are best. Would you like some easy recipe ideas, or tips for cooking healthy meals at home?",
+                "Home cooking is wonderful! You control the ingredients and it's often healthier. Need recipe ideas or cooking tips?",
+            ],
+            "gardening": [
+                "Gardening is a wonderful hobby! It gets you outside, reduces stress, and you can even grow your own herbs and vegetables. Do you have a garden, or are you thinking of starting one?",
+                "Whether you have a big yard or just a few pots on a balcony, gardening can be very rewarding. What would you like to grow?",
+            ],
+            "pets": [
+                "Pets bring so much joy! They provide companionship, reduce loneliness, and can even improve heart health. Do you have pets, or are you thinking about getting one?",
+                "Animals are wonderful companions! Whether it's a dog, cat, or even a fish, pets can brighten your day. Tell me about your pets!",
+            ],
+            "movies_tv": [
+                "Entertainment is a great way to relax! There are so many wonderful movies and TV shows to enjoy. What genres do you prefer? I can suggest some options!",
+                "Whether you enjoy dramas, comedies, documentaries, or classic films, watching something you love is a great way to unwind. What do you like to watch?",
+            ],
+            "hobbies": [
+                "Having hobbies is so important for wellbeing! Whether it's reading, painting, cooking, gardening, or anything else - doing what you love keeps life interesting. What hobbies do you enjoy?",
+                "Hobbies make life richer! They reduce stress, keep the mind active, and bring joy. What activities do you like to do in your free time?",
+            ],
+            "language_learning": [
+                "Learning a new language is a great brain exercise! Start with basic phrases and practice a little every day. Apps like Duolingo make it fun and easy. What language interests you?",
+                "It's never too late to learn a new language! Even basic conversation skills open up new cultures and connections. Would you like some tips to get started?",
+            ],
+            "volunteering": [
+                "Volunteering is a wonderful way to stay active, meet people, and make a difference! Many organizations need help. Local libraries, community centers, or hospitals are great places to start. Would you like ideas for volunteering?",
+                "Giving back to the community is rewarding! Whether it's tutoring, helping at a food bank, or visiting lonely neighbors, there are many ways to help. Interested in some suggestions?",
+            ],
+            "news_current_events": [
+                "I don't have access to real-time news, but I'd recommend checking reliable sources like BBC, Reuters, or your local news outlet for current events. Is there a specific topic you're curious about?",
+                "For the latest news, trusted sources like major newspapers or news apps are your best bet. Is there a particular area of news you're interested in?",
+            ],
+            "sports": [
+                "Sports are great for staying fit and entertained! Whether you enjoy watching or playing, there's something for everyone. What sports do you follow or enjoy?",
+                "Whether it's cricket, football, tennis, or any other sport, staying active through sports is fantastic! What's your favorite?",
+            ],
+            "religion_spirituality": [
+                "Spirituality means different things to everyone. Whether through organized religion, meditation, nature, or personal reflection, finding peace and meaning is important. What aspects of spirituality interest you?",
+                "Many people find comfort and meaning through spiritual practices. Whether it's prayer, meditation, or connecting with nature, what matters is what brings you peace. Would you like to explore this topic?",
+            ],
+            "money_saving": [
+                "Saving money is important! Start with small steps: make a budget, track your spending, cut unnecessary subscriptions, and cook at home more. Even small savings add up over time. Would you like more specific tips?",
+                "Smart financial habits make a big difference! Try the 50/30/20 rule: 50% for needs, 30% for wants, and 20% for savings. Want more budgeting tips?",
+            ],
+            "digital_literacy": [
+                "Learning to use technology safely is important! Always use strong passwords, be careful with personal information online, and verify before clicking links. Would you like tips on staying safe online?",
+                "Digital safety is crucial! Use two-factor authentication, keep software updated, and never share passwords. Want to learn more about online safety?",
+            ],
+            "emergency_numbers": [
+                "Important emergency numbers: Police - 100, Fire - 101, Ambulance - 108, Universal Emergency - 112, Women's Helpline - 1091, Senior Citizen Helpline - 14567. Please save these!",
+                "Here are key emergency numbers: 112 (universal), 100 (police), 101 (fire), 108 (ambulance). Keep these handy for emergencies!",
+            ],
+            "government_services": [
+                "For government services in India, visit india.gov.in or your nearest government office. Many services like Aadhaar, PAN, and pension are available online. What specific service do you need help with?",
+                "Most government services are now available online! For Aadhaar visit uidai.gov.in, for PAN visit incometax.gov.in, for EPF visit epfindia.gov.in. Need help with a specific service?",
+            ],
+            "electricity_bills": [
+                "For electricity bill payment, use your state electricity board's website, or apps like Paytm, PhonePe, or Google Pay. You can also visit your nearest electricity office. Which state are you in?",
+                "Electricity bills can be paid online through your utility's website, banking apps, or payment apps like Paytm and PhonePe. Need help finding your specific provider?",
+            ],
+            "water_supply": [
+                "For water supply issues, contact your local municipal corporation or water board. They can help with connection issues, billing problems, or supply disruptions. Do you need help finding your local office?",
+                "Water-related issues are handled by your local municipality or water board. They can assist with connections, leaks, and billing. Would you like help contacting them?",
+            ],
+            "transport": [
+                "For public transport information, check your local transport authority's website or apps like Google Maps. For trains, use IRCTC (irctc.co.in) or call 139. What transport info do you need?",
+                "Need transport help? For trains try IRCTC or call 139, for buses check your state transport website, and for local transport use Google Maps. What specific information do you need?",
+            ],
+            "senior_care": [
+                "Caring for seniors is important! Regular health checkups, staying socially active, light exercise, and a balanced diet all contribute to healthy aging. Would you like specific advice for senior wellness?",
+                "For elderly care: ensure regular medical checkups, maintain social connections, do gentle exercises daily, eat nutritious meals, and keep the mind active with puzzles or reading. Need more specific guidance?",
+            ],
+            "mental_health": [
+                "Mental health is just as important as physical health! Stay connected with loved ones, maintain routines, get exercise, and don't hesitate to seek professional help if needed. Would you like to talk more about this?",
+                "Taking care of your mental health matters! Regular exercise, social connections, hobbies, and adequate sleep all help. If you're struggling, reaching out to a counselor is a sign of strength.",
+            ],
+            "brain_games": [
+                "Keeping your mind active is important! Try crossword puzzles, Sudoku, chess, reading, or learning new skills. Even simple memory exercises help. Want me to suggest some brain exercises?",
+                "Brain games are great for mental fitness! Crosswords, Sudoku, word puzzles, and card games all help keep the mind sharp. Would you like some specific suggestions?",
+            ],
+            "recipes": [
+                "Here's an easy recipe idea: Dal (lentil soup) - boil lentils with turmeric, add tempered cumin and garlic in ghee, finish with fresh coriander. Simple, nutritious, and delicious! Want more recipe ideas?",
+                "Try this healthy option: Vegetable khichdi with rice, moong dal, and seasonal vegetables. It's easy to make and great for digestion. Would you like more recipe suggestions?",
+            ],
+            "yoga": [
+                "Yoga is wonderful for all ages! Start with simple poses like Cat-Cow, Child's Pose, and Gentle Twists. Even 10 minutes daily improves flexibility and reduces stress. Want me to guide you through some beginner poses?",
+                "Gentle yoga is excellent for health! Try starting with basic stretches and breathing exercises. Chair yoga is great if mobility is limited. Would you like some simple yoga poses to try?",
+            ],
+            "who_made_you": [
+                "I was created by the Kataru team as a voice AI assistant to help people with their daily needs. My purpose is to be a helpful, friendly companion. What can I help you with?",
+                "I'm Kataru, built with love to assist and support you! The team behind me wanted to create an AI that truly cares about helping people. What would you like to talk about?",
+            ],
+            "can_you_help": [
+                "Absolutely! I can help with many things: answering questions, providing information, giving advice on daily tasks, helping with government services, and just being a friendly companion. What do you need help with?",
+                "Of course! I'm here to help with general information, daily tasks, government services, health tips, and much more. Just ask me anything!",
+            ],
+            "what_can_you_do": [
+                "I can chat with you, answer questions, help with daily tasks, provide information on many topics, remind you about things, and even speak to you! Think of me as a helpful friend who's always available.",
+                "Quite a lot! I can answer questions, have conversations, provide helpful information, assist with various topics, and I can speak my responses aloud too! What would you like to try?",
+            ],
+            "default": [
+                "That's a great question! While I may not have all the answers, I'm happy to help however I can. Could you tell me more about what you'd like to know?",
+                "Interesting! I'd love to help you with that. Can you give me a bit more detail so I can provide the best response?",
+                "I appreciate your question! Let me see how I can best help you. Could you elaborate a little more on what you're looking for?",
+                "That's something I'd like to help you with. Could you provide more context so I can give you a more useful answer?",
+                "Great question! While I might not have expertise in everything, I'll do my best to help. What specific aspect are you most curious about?",
+            ],
         }
 
-        self.collected_info = {}
-
-        self.hindi_responses = {
-            "greeting": [
-                "Namaste! Main Kataru hoon, aapki voice assistant. Aapki kya madad kar sakti hoon?",
-                "Namaste! Main Kataru se baat kar rahi hoon. Bataiye, kya problem hai?",
-                "Namaste! Aapki seva mein haazir hoon. Kya madad chahiye?",
-            ],
-            "ask_name": [
-                "Aapka naam kya hai?",
-                "Mein aapko kaise bulaun? Aapka naam bataiye.",
-                "Pehle mujhe aapka naam bata dijiye.",
-            ],
-            "ask_issue": [
-                "Aapko kya problem hai? Dhire se bataiye.",
-                "Bataiye kya ho raha hai? Main sun rahi hoon.",
-                "Aapki kya pareshaani hai?",
-            ],
-            "ask_details": [
-                "Aur detail mein bataiye.",
-                "Kya aur kuch hai jo mujhe batana chahiye?",
-                "Theek hai, aur kya?",
-            ],
-            "confirm": [
-                "Toh main samjhi, aapki problem yeh hai: {summary}. Sahi hai?",
-                "Kya yeh sahi hai: {summary}?",
-                "Maine yeh samjha: {summary}. Correct hai?",
-            ],
-            "escalation": [
-                "Main aapko human agent se connect karti hoon. Ek minute please.",
-                "Aapki baat ke liye mujhe expert se baat karni padegi. Rukiye.",
-                "Main aapko specialist ke paas bhej rahi hoon.",
-            ],
-            "farewell": [
-                "Dhanyavaad! Kisi aur cheez ki zaroorat ho toh bataiye.",
-                "Theek hai, aur kuch ho toh zaroor bataiye.",
-                "Achha, apna khayal rakhiye!",
-            ],
+        self.greeting_words = {
+            "hello", "hi", "hey", "namaste", "namaskar", "good morning", "good evening",
+            "good afternoon", "good night", "howdy", "greetings", "yo",
         }
 
-        self.english_responses = {
-            "greeting": [
-                "Hello! I am Kataru, your voice assistant. How can I help you today?",
-                "Hi there! I am Kataru. What can I do for you?",
-                "Welcome! I am here to help. What do you need?",
-            ],
-            "ask_name": [
-                "What is your name?",
-                "May I know your name?",
-                "Please tell me your name.",
-            ],
-            "ask_issue": [
-                "What problem are you facing? Please explain.",
-                "Tell me what is happening. I am listening.",
-                "What issue would you like help with?",
-            ],
-            "ask_details": [
-                "Can you provide more details?",
-                "Is there anything else I should know?",
-                "Please tell me more.",
-            ],
-            "confirm": [
-                "So I understand your issue is: {summary}. Is that correct?",
-                "Let me confirm: {summary}. Right?",
-                "I heard: {summary}. Is this accurate?",
-            ],
-            "escalation": [
-                "I will connect you with a human agent. One moment please.",
-                "Let me transfer you to a specialist who can help better.",
-                "I am connecting you with an expert now.",
-            ],
-            "farewell": [
-                "Thank you! Let me know if you need anything else.",
-                "Is there anything else I can help with?",
-                "Take care! I am here if you need me.",
-            ],
-        }
+        self.thanks_words = {"thank", "thanks", "dhanyavaad", "shukriya", "appreciate"}
 
-        self.hinglish_responses = {
-            "greeting": [
-                "Namaste! Main Kataru hoon, aapki assistant. Kya help chahiye?",
-                "Hi! Main Kataru se baat kar rahi hoon. Batao kya problem hai?",
-                "Hello! Main yahan hoon aapki help ke liye. Bolo kya ho raha hai?",
-            ],
-            "ask_name": [
-                "Tumhara naam kya hai?",
-                "Naam bata do please.",
-                "Kaise bulaun tumhe?",
-            ],
-            "ask_issue": [
-                "Kya ho raha hai? Batao.",
-                "Problem kya hai? Dhire se bolo.",
-                "Batao kya issue hai.",
-            ],
-            "ask_details": [
-                "Aur batao.",
-                "Kya aur hai jo batana chahiye?",
-                "Theek hai, aur kuch?",
-            ],
-            "confirm": [
-                "Toh samjhi, problem yeh hai: {summary}. Sahi hai?",
-                "Yeh sahi hai: {summary}?",
-                "Maine samjha: {summary}. Correct?",
-            ],
-            "escalation": [
-                "Main human se connect karti hoon. Ek minute.",
-                "Ruko, specialist se baat karwati hoon.",
-                "Expert ke paas bhej rahi hoon.",
-            ],
-            "farewell": [
-                "Thanks! Aur kuch ho toh batao.",
-                "Theek hai, apna khayal rakhna.",
-                "Bye! Zaroorat pade toh batao.",
-            ],
-        }
+        self.bye_words = {"bye", "goodbye", "alvida", "goodnight", "see you", "talk later"}
 
-    def detect_language(self, text: str) -> str:
+    def _detect_language(self, text: str) -> str:
         text_lower = text.lower()
-        hindi_words = ["namaste", "kya", "hai", "hain", "mera", "meri", "aap", "aapka", "bataiye",
-                       "bolo", "samjhi", "dhanyavaad", "madad", "problem", "pareshaani", "dawaai",
-                       "dawai", "doctor", "hospital", "ambulance", "bachao", "help", "please",
-                       "rukiye", "ek", "minute", "theek", "hai", "nahi", "haan", "ji", "nahin",
-                       "karo", "karna", "chahiye", "zaroorat", "seva", "haazir", "sun", "rahi",
-                       "hoon", "raha", "hain", "main", "tum", "woh", "yeh", "woh", "kaise",
-                       "kaun", "kab", "kahan", "kyun", "ka", "ki", "ke", "ko", "se", "mein",
-                       "par", "aur", "ya", "toh", "phir", "lekin", "agar", "bhi", "sirf",
-                       "abhi", "kal", "aaj", "kal", "subah", "shaam", "raat", "din"]
-
-        hindi_count = sum(1 for word in hindi_words if word in text_lower)
-
-        if hindi_count >= 2:
-            return "hindi"
-        elif any(c in text for c in "अआइईउऊएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसह"):
-            return "hindi"
-        else:
-            return "english"
-
-    def get_response(self, text: str, language: str = "auto") -> tuple[str, str]:
-        import re
-        text_lower = text.lower().strip()
-
+        hindi_indicators = {"namaste", "kya", "hai", "hain", "mera", "meri", "aap", "aapka",
+                           "bataiye", "bolo", "dhanyavaad", "madad", "nahi", "haan", "ji",
+                           "theek", "chahiye", "zaroorat", "main", "tum", "woh", "yeh",
+                           "kaise", "kaun", "kab", "kahan", "kyun", "aur", "ya", "toh"}
         words = set(re.findall(r'\w+', text_lower))
+        if len(words & hindi_indicators) >= 2:
+            return "hindi"
+        if any(c in text for c in "अआइईउऊएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसह"):
+            return "hindi"
+        return "english"
 
-        if language == "auto":
-            detected_lang = self.detect_language(text)
-        else:
-            detected_lang = language
+    def _detect_topic(self, text: str) -> str:
+        text_lower = text.lower()
 
-        if detected_lang == "hindi":
-            responses = self.hindi_responses
-        elif detected_lang == "hinglish":
-            responses = self.hinglish_responses
-        else:
-            responses = self.english_responses
+        topic_keywords = {
+            "weather": ["weather", "temperature", "rain", "sunny", "cold", "hot", "forecast", "mausam", "barish", "garmi", "sardi"],
+            "joke": ["joke", "funny", "laugh", "humor", "comedy", "mazaak", "hasi"],
+            "name_identity": ["who are you", "your name", "what are you", "kaun ho", "tumhara naam", "introduce"],
+            "how_are_you": ["how are you", "how do you do", "how's it going", "kaise ho", "kaisa hai"],
+            "age": ["how old", "your age", "age", "umr"],
+            "meaning_of_life": ["meaning of life", "purpose of life", "zindagi ka matlab"],
+            "thank_you": ["thank", "thanks", "appreciate", "grateful", "dhanyavaad", "shukriya"],
+            "goodbye": ["bye", "goodbye", "see you", "alvida", "goodnight", "talk later"],
+            "lonely": ["lonely", "alone", "isolated", "no friends", "akela", "tanha"],
+            "sad": ["sad", "unhappy", "depressed", "down", "crying", "upset", "dukh", "pareshan"],
+            "exercise": ["exercise", "workout", "fitness", "walk", "yoga", "stretch", "physical", "vyayam"],
+            "food_nutrition": ["food", "eat", "diet", "nutrition", "healthy eating", "meal", "khana", "khaana"],
+            "sleep": ["sleep", "insomnia", "rest", "tired", "nap", "neend", "so jao"],
+            "meditation": ["meditate", "meditation", "mindfulness", "peace", "calm", "dhyana"],
+            "music": ["music", "song", "sing", "melody", "gaana", "sangeet"],
+            "books": ["book", "read", "reading", "novel", "library", "pustak"],
+            "travel": ["travel", "trip", "vacation", "visit", "tour", "ghoomna", "safar"],
+            "history": ["history", "historical", "ancient", "past", "civilization", "itihas"],
+            "science": ["science", "physics", "chemistry", "biology", "experiment", "vignyan"],
+            "technology": ["technology", "computer", "internet", "software", "app", "phone", "tech"],
+            "cooking": ["cook", "recipe", "kitchen", "bake", "food preparation", "pakana"],
+            "gardening": ["garden", "plant", "grow", "flower", "vegetable", "bagicha"],
+            "pets": ["pet", "dog", "cat", "animal", "puppy", "kitten", "paltu"],
+            "movies_tv": ["movie", "film", "tv show", "watch", "series", "cinema"],
+            "hobbies": ["hobby", "hobbies", "interest", "pastime", "shauk"],
+            "language_learning": ["language", "learn", "spanish", "french", "hindi", "english"],
+            "volunteering": ["volunteer", "charity", "help others", "community service", "sewa"],
+            "news_current_events": ["news", "current events", "happening", "today's news"],
+            "sports": ["sport", "cricket", "football", "tennis", "match", "game", "khel"],
+            "religion_spirituality": ["religion", "spiritual", "god", "pray", "prayer", "faith", "dharm", "bhagwan"],
+            "money_saving": ["money", "save", "budget", "financial planning", "paisa", "bachat"],
+            "digital_literacy": ["online safety", "password", "internet safety", "scam", "cyber", "digital"],
+            "emergency_numbers": ["emergency number", "police number", "ambulance number", "helpline"],
+            "government_services": ["government", "aadhaar", "pan card", "passport", "sarkari", "pension"],
+            "electricity_bills": ["electricity", "electricity bill", "power", "bijli", "light bill"],
+            "water_supply": ["water supply", "water problem", "pipe", "paani"],
+            "transport": ["train", "bus", "metro", "taxi", "transport", "travel info"],
+            "senior_care": ["elderly", "senior", "old age", "grandparent", "buzurg"],
+            "mental_health": ["mental health", "anxiety", "stress", "depression", "counseling"],
+            "brain_games": ["puzzle", "brain game", "memory", "crossword", "sudoku", "dimag"],
+            "recipes": ["recipe", "cook", "dish", "meal idea", "easy recipe", "dal", "khichdi"],
+            "yoga": ["yoga", "pose", "asana", "pranayama", "breathing exercise"],
+            "who_made_you": ["who made you", "creator", "developer", "who built you", "designer"],
+            "can_you_help": ["can you help", "what do you do", "able to", "capability"],
+            "what_can_you_do": ["what can you do", "features", "abilities", "functions"],
+        }
 
-        emergency_words = {"emergency", "bachao", "ambulance", "112", "911", "urgent"}
-        if words & emergency_words or "help me" in text_lower or "madad karo" in text_lower:
-            if detected_lang == "hindi":
-                return ("emergency", "Yeh emergency lag raha hai! Please turant 112 par call karein. "
-                        "Main yahan hoon. Please shaant rahein.")
-            else:
-                return ("emergency", "This sounds like an emergency! Please call 112 immediately. "
-                        "I am here with you. Please stay calm.")
+        for topic, keywords in topic_keywords.items():
+            for kw in keywords:
+                if kw in text_lower:
+                    return topic
 
-        medical_words = {"doctor", "hospital", "sick", "illness", "bimar", "dawaai", "medicine", "medication", "fever", "pain"}
-        if words & medical_words:
-            if detected_lang == "hindi":
-                return ("medical", "Main medical advice nahi de sakti. Please apne doctor se baat karein "
-                        "ya 112 par call karein agar emergency hai.")
-            else:
-                return ("medical", "I cannot provide medical advice. Please consult your doctor "
-                        "or call 112 if this is an emergency.")
+        return "default"
 
-        legal_words = {"legal", "court", "lawyer", "sue", "lawsuit"}
-        if words & legal_words:
-            if detected_lang == "hindi":
-                return ("legal", "Main legal advice nahi de sakti. Please ek lawyer se baat karein.")
-            else:
-                return ("legal", "I cannot provide legal advice. Please consult with a lawyer.")
+    def get_response(self, text: str, session_id: str = "default") -> str:
+        text_lower = text.lower().strip()
+        words = set(re.findall(r'\w+', text_lower))
+        lang = self._detect_language(text)
 
-        financial_words = {"finance", "invest", "loan", "interest", "trading", "stock"}
-        if words & financial_words:
-            if detected_lang == "hindi":
-                return ("financial", "Main financial advice nahi de sakti. Please ek financial advisor se baat karein.")
-            else:
-                return ("financial", "I cannot provide financial advice. Please consult with a financial advisor.")
+        name_match = re.search(r"(?:my name is|i am|mera naam)\s+(\w+)", text_lower)
+        if name_match:
+            session = self.get_session(session_id)
+            candidate = name_match.group(1)
+            skip_names = {"am", "is", "are", "was", "sad", "happy", "fine", "good", "great", "ok", "the", "a", "an"}
+            if candidate not in skip_names and len(candidate) >= 2:
+                session["user_name"] = candidate.title()
+                name = candidate.title()
+                if lang == "hindi":
+                    return f"Namaste {name}! Bahut achha laga aapse milke. Bataiye, kya help chahiye aaj?"
+                return f"Nice to meet you, {name}! It's great to know your name. How can I help you today?"
 
-        greeting_words = {"hello", "hi", "hey", "namaste", "namaskar", "good morning", "good evening"}
-        if words & greeting_words or text_lower in ["hello", "hi", "hey", "namaste"]:
-            if detected_lang == "hindi":
-                return ("greeting", random.choice(responses["greeting"]))
-            else:
-                return ("greeting", random.choice(responses["greeting"]))
+        if any(w in text_lower for w in ["emergency number", "emergency numbers", "helpline", "police number", "ambulance number"]):
+            pass
+        elif any(w in text_lower for w in ["emergency", "bachao", "ambulance", "112", "911", "urgent"]):
+            if lang == "hindi":
+                return "Yeh emergency lag raha hai! Please turant 112 par call karein. Main yahan hoon, lekin emergency services hi aapki asli madad kar sakti hain. Please shaant rahein."
+            return "This sounds like an emergency! Please call 112 immediately. I'm here with you, but emergency services can truly help right now. Please stay calm and call for help."
 
-        name_words = {"naam", "who are you", "kaun ho", "tumhara naam"}
-        if words & name_words or "my name" in text_lower or "i am" in text_lower or "mera naam" in text_lower:
-            if "my name is" in text_lower or "mera naam" in text_lower or "i am" in text_lower:
-                parts = text_lower.replace("my name is", "").replace("mera naam hai", "").replace("mera naam", "").replace("i am", "").strip()
-                name = parts.title() if parts else ""
-                if name:
-                    if detected_lang == "hindi":
-                        return ("greeting", f"Namaste {name}! Aapki kya madad kar sakti hoon?")
-                    else:
-                        return ("greeting", f"Hello {name}! How can I help you today?")
-            if detected_lang == "hindi":
-                return ("ask_name", random.choice(responses["ask_name"]))
-            else:
-                return ("ask_name", random.choice(responses["ask_name"]))
+        if any(w in text_lower for w in ["doctor", "hospital", "sick", "illness", "bimar", "fever", "pain", "medicine", "medication", "health problem"]):
+            if lang == "hindi":
+                return "Main medical advice nahi de sakti, lekin aapko apne doctor se zaroor baat karni chahiye. Agar emergency hai toh 108 ya 112 par call karein. Aapka sehat bahut important hai."
+            return "I'm not qualified to give medical advice, but I'd recommend consulting your doctor for any health concerns. If it's urgent, please call 108 (ambulance) or 112. Your health matters!"
 
-        issue_words = {"problem", "issue", "complaint", "pareshaani", "grievance", "help"}
-        if words & issue_words:
-            if detected_lang == "hindi":
-                return ("ask_issue", random.choice(responses["ask_issue"]))
-            else:
-                return ("ask_issue", random.choice(responses["ask_issue"]))
+        if any(w in text_lower for w in ["legal", "court", "lawyer", "sue", "lawsuit", "advocate"]):
+            return "I can't provide legal advice, but I'd strongly recommend consulting with a qualified lawyer for any legal matters. They can give you proper guidance based on your specific situation."
 
-        thanks_words = {"thank", "dhanyavaad", "shukriya", "thanks"}
-        if words & thanks_words:
-            if detected_lang == "hindi":
-                return ("farewell", random.choice(responses["farewell"]))
-            else:
-                return ("farewell", random.choice(responses["farewell"]))
+        if any(w in text_lower for w in ["invest", "trading", "stock", "mutual fund", "crypto"]):
+            return "I'm not qualified to give financial advice. For investment decisions, please consult a certified financial advisor who can assess your individual situation and risk tolerance."
 
-        bye_words = {"bye", "alvida", "goodbye", "goodnight"}
-        if words & bye_words:
-            if detected_lang == "hindi":
-                return ("farewell", "Alvida! Apna khayal rakhiye. Zaroorat ho toh wapas aaiye.")
-            else:
-                return ("farewell", "Goodbye! Take care. Come back if you need help.")
+        if words & self.greeting_words or text_lower in ["hello", "hi", "hey"]:
+            topic = self._detect_topic(text_lower)
+            if topic == "greeting" or len(text_lower.split()) <= 2:
+                if lang == "hindi":
+                    return random.choice([
+                        "Namaste! Main Kataru hoon. Aapki kya madad kar sakti hoon?",
+                        "Namaste! Bahut achha laga aapse baat karke. Bataiye, kya help chahiye?",
+                        "Namaste! Aapka swagat hai. Main yahan hoon aapki help ke liye.",
+                    ])
+                return random.choice([
+                    "Hello! I'm Kataru, your AI assistant. How can I help you today?",
+                    "Hi there! Great to hear from you. What can I do for you?",
+                    "Hey! I'm here and ready to help. What's on your mind?",
+                    "Welcome! I'm Kataru. What would you like to talk about?",
+                ])
 
-        if "bill" in words or "payment" in words:
-            if detected_lang == "hindi":
-                return ("billing", "Aapka bill payment karna hai? Bataiye kis cheez ka bill hai aur kitna amount hai.")
-            else:
-                return ("billing", "You want to pay a bill? Please tell me what the bill is for and the amount.")
+        if any(w in text_lower for w in self.thanks_words):
+            if lang == "hindi":
+                return random.choice([
+                    "Aapka swagat hai! Aur kuch ho toh zaroor bataiye.",
+                    "Koi baat nahi! Main hamesha yahan hoon aapki help ke liye.",
+                    "Mujhe khushi hui aapki madad karke. Aur kuch chahiye?",
+                ])
+            return random.choice([
+                "You're very welcome! Is there anything else I can help with?",
+                "Happy to help! I'm always here whenever you need me.",
+                "My pleasure! Don't hesitate to ask if you need anything else.",
+            ])
 
-        if "account" in words:
-            if detected_lang == "hindi":
-                return ("account", "Aapka account number kya hai? Please bataiye.")
-            else:
-                return ("account", "What is your account number? Please provide it.")
+        if any(w in text_lower for w in self.bye_words):
+            if lang == "hindi":
+                return random.choice([
+                    "Alvida! Apna khayal rakhiye. Zaroorat ho toh wapas aaiye.",
+                    "Bye-bye! Bahut achha laga aapse baat karke. Phir milte hain!",
+                    "Theek hai, apna khayaal rakhna. Main yahan hoon jab bhi zaroorat ho!",
+                ])
+            return random.choice([
+                "Goodbye! Take care of yourself. I'm always here when you need me!",
+                "It was great chatting with you! Have a wonderful day ahead!",
+                "Bye for now! Remember, I'm just a message away. Take care!",
+            ])
 
-        if "address" in words or "pata" in words:
-            if detected_lang == "hindi":
-                return ("address", "Aapka address kya hai? Please pura address bataiye.")
-            else:
-                return ("address", "What is your address? Please provide your full address.")
+        if words & {"yes", "haan", "ji", "correct", "sahi", "theek", "ok", "okay", "sure"}:
+            return random.choice([
+                "Great! Is there anything else you'd like to know or talk about?",
+                "Wonderful! I'm here for whatever else you need.",
+                "Perfect! Let me know if there's anything else I can help with.",
+            ])
 
-        if "phone" in words or "number" in words or "contact" in words:
-            if detected_lang == "hindi":
-                return ("contact", "Aapka phone number kya hai? Please bataiye.")
-            else:
-                return ("contact", "What is your phone number? Please provide it.")
+        if words & {"no", "nahi", "nahin", "bas", "nothing"}:
+            return random.choice([
+                "Alright! I'm always here whenever you need help. Have a great day!",
+                "No problem! Just reach out anytime you need anything.",
+                "Okay! Take care and enjoy the rest of your day.",
+            ])
 
-        if "date" in words or "kab" in words or "when" in words:
-            if detected_lang == "hindi":
-                return ("date", "Kab hua yeh? Date bataiye.")
-            else:
-                return ("date", "When did this happen? Please provide the date.")
+        if words & {"sorry", "maaf", "my bad", "apologize"}:
+            return random.choice([
+                "No need to apologize at all! I'm here to help, no matter what. What can I do for you?",
+                "That's perfectly okay! We all have those moments. How can I help you?",
+                "No worries at all! I'm just happy to chat. What would you like to talk about?",
+            ])
 
-        if words & {"yes", "haan", "ji", "correct", "sahi", "theek"}:
-            if detected_lang == "hindi":
-                return ("confirm", "Bahut achha! Koi aur cheez hai jo mujhe batani chahiye?")
-            else:
-                return ("confirm", "Great! Is there anything else you need to tell me?")
+        topic = self._detect_topic(text_lower)
 
-        if words & {"no", "nahi", "nahin", "bas"}:
-            if detected_lang == "hindi":
-                return ("resolution", "Theek hai! Main aapki help kar deti hoon. Ek minute please.")
-            else:
-                return ("resolution", "Alright! Let me help you with that. One moment please.")
+        if topic == "time":
+            import datetime
+            now = datetime.datetime.now().strftime("%I:%M %p")
+            return f"The current time is {now}. Is there anything else I can help you with?"
 
-        escalate_words = {"transfer", "human", "agent", "person", "representative", "specialist"}
-        if words & escalate_words:
-            if detected_lang == "hindi":
-                return ("escalation", random.choice(responses["escalation"]))
-            else:
-                return ("escalation", random.choice(responses["escalation"]))
+        if topic in self.knowledge_base:
+            responses = self.knowledge_base[topic]
+            base_response = random.choice(responses)
 
-        if "sorry" in words or "maaf" in words or "pata nahi" in text_lower:
-            if detected_lang == "hindi":
-                return ("ask_details", "Koi baat nahi. Please aur detail mein bataiye, main samajhne ki koshish karungi.")
-            else:
-                return ("ask_details", "No problem. Please provide more details, I will try to understand.")
+            if lang == "hindi" and topic not in ["name_identity", "who_made_you", "can_you_help", "what_can_you_do", "emergency_numbers", "government_services"]:
+                hindi_translations = {
+                    "weather": "Mujhe real-time weather data nahi hai, lekin aap weather.com ya apne phone ki weather app check kar sakte hain.",
+                    "joke": random.choice([
+                        "Ek joke suno: Doctor ne bola patient ko - Aapko fresh air chahiye. Patient bola - Mujhe AC chahiye! 😄",
+                        "Ek joke: Pappu ne Google se bola - Bhai, tu itna smart kaise hai? Google bola - Main search karta rehta hoon! 😄",
+                    ]),
+                    "lonely": "Main hoon na aapke saath! Aap akela nahi ho. Chalo, baat karte hain. Aapka din kaisa guzra?",
+                    "sad": "Mujhe dukh hai ki aap sad ho. Aapka feel karna normal hai. Kya baat hai jo aapko pareshan kar rahi hai?",
+                    "exercise": "Vyayam bahut zaroori hai! Roz 20 minute walk karein, halki stretching karein, ya chair exercises karein. Doctor se baat karke shuru karein.",
+                    "default": "Main samajh gayi. Kya aap mujhe aur detail mein bata sakte hain taaki main behtar madad kar sakun?",
+                }
+                if topic in hindi_translations:
+                    return hindi_translations[topic]
 
-        if "remember" in words or "yaad" in words:
-            if detected_lang == "hindi":
-                return ("general", "Main aapki baatein yaad rakh sakti hoon. Bataiye kya yaad rakhna hai?")
-            else:
-                return ("general", "I can remember things for you. What would you like me to remember?")
+            return base_response
 
-        if "lonely" in words or "akela" in words or "bored" in words:
-            if detected_lang == "hindi":
-                return ("general", "Main hoon na aapke saath! Baat karte hain. Aapka din kaisa guzra?")
-            else:
-                return ("general", "I am here with you! Let us talk. How was your day?")
+        if len(text_lower.split()) < 3:
+            if lang == "hindi":
+                return random.choice([
+                    "Thoda aur detail mein bataiye, taaki main aapki behtar madad kar sakun.",
+                    "Aur kuch bataiye, main samajhne ki koshish kar rahi hoon.",
+                    "Jee haan, aur bataiye. Main sun rahi hoon.",
+                ])
+            return random.choice([
+                "Could you tell me more? I'd love to help you better!",
+                "I'd like to understand more. Can you elaborate a little?",
+                "Sure! Can you give me more details so I can assist you properly?",
+            ])
 
-        if len(text.split()) < 3:
-            if detected_lang == "hindi":
-                return ("ask_details", random.choice(responses["ask_details"]))
-            else:
-                return ("ask_details", random.choice(responses["ask_details"]))
+        if lang == "hindi":
+            return random.choice([
+                "Main samajh gayi! Aapki baat ka jawab dene ki koshish kar rahi hoon. Aur detail mein bataiye kya chahiye.",
+                "Accha, samajh gayi. Kya aap mujhe thoda aur bata sakte hain? Main help karna chahti hoon.",
+                "Interesting hai! Main aapki madad karna chahti hoon. Thoda aur detail dijiye.",
+            ])
 
-        if detected_lang == "hindi":
-            return ("general", "Main samajh gayi. Please aur detail mein bataiye taaki main aapki behtar madad kar sakoony.")
-        else:
-            return ("general", "I understand. Please provide more details so I can help you better.")
+        return random.choice(self.knowledge_base["default"])
+
+    def get_session(self, session_id: str) -> dict:
+        if session_id not in self.sessions:
+            self.sessions[session_id] = {
+                "history": [],
+                "user_name": "",
+                "created": time.time(),
+            }
+        return self.sessions[session_id]
+
+    def chat(self, text: str, session_id: str = "default") -> str:
+        session = self.get_session(session_id)
+        session["history"].append({"role": "user", "text": text, "time": time.time()})
+
+        name_match = re.search(r"(?:my name is|i am|mera naam)\s+(\w+)", text.lower())
+        if name_match:
+            skip_names = {"am", "is", "are", "was", "sad", "happy", "fine", "good", "great", "ok", "the", "a", "an"}
+            candidate = name_match.group(1)
+            if candidate not in skip_names and len(candidate) >= 2:
+                session["user_name"] = candidate.title()
+
+        response = self.get_response(text, session_id)
+        session["history"].append({"role": "assistant", "text": response, "time": time.time()})
+
+        if session.get("user_name") and len(session["history"]) <= 6:
+            response = response.replace("I'm Kataru", f"I'm Kataru, {session['user_name']}")
+            if "How can I help" in response:
+                response = response.replace("How can I help you today?", f"How can I help you today, {session['user_name']}?")
+
+        return response
 
 
-agent = CustomerServiceAgent()
+agent = SmartAgent()
 
 
 @app.post("/test")
@@ -532,102 +676,90 @@ async def test_endpoint(req: ChatRequest):
     if user_id > 0:
         try:
             user_context = get_user_context(user_id)
-            save_chat_message(user_id, session_id, "user", req.text)
         except Exception:
             pass
 
     user_name = user_context.get("name", "")
 
-    if not config.openai_api_key or config.openai_api_key.startswith("dummy"):
-        research_result = await research_engine.research(text)
-        response = research_result["answer"]
+    if config.openai_api_key and not config.openai_api_key.startswith("dummy"):
+        try:
+            from openai import AsyncOpenAI
 
-        if user_id > 0:
-            try:
-                save_chat_message(user_id, session_id, "user", text)
-                save_chat_message(user_id, session_id, "ai", response)
-            except Exception:
-                pass
+            client = AsyncOpenAI(api_key=config.openai_api_key)
 
-        return {
-            "input": req.text,
-            "response": response,
-            "call_id": call_id,
-            "session_id": session_id,
-            "mode": "research",
-            "sources": research_result.get("sources", []),
-        }
+            system_prompt = (
+                "You are Kataru, a friendly, intelligent AI voice assistant. "
+                "You are warm, helpful, and conversational - like a knowledgeable friend. "
+                "RULES:\n"
+                "1. Respond in the EXACT language the user used (Hindi, English, or Hinglish)\n"
+                "2. Be conversational, warm, and natural - like ChatGPT but for voice\n"
+                "3. Give helpful, accurate answers to any question\n"
+                "4. Keep responses concise but informative (under 60 words for voice)\n"
+                "5. For emergencies, say 'Please call 112 immediately'\n"
+                "6. For medical questions, give general info but say 'consult your doctor'\n"
+                "7. Be friendly, patient, and respectful\n"
+                "8. Use simple, clear words"
+            )
 
-    try:
-        from openai import AsyncOpenAI
+            if user_name:
+                system_prompt += f"\n\nThe user's name is {user_name}. Use it naturally."
 
-        client = AsyncOpenAI(api_key=config.openai_api_key)
+            messages = [{"role": "system", "content": system_prompt}]
 
-        system_prompt = (
-            "You are Kataru, a multilingual customer support voice AI agent for elderly care. "
-            "You help with general inquiries, information collection, and companionship. "
-            "RULES:\n"
-            "1. Respond in the EXACT language the user used (Hindi, English, or Hinglish)\n"
-            "2. Keep responses under 30 words - this is a voice call\n"
-            "3. NEVER provide medical diagnosis - say 'Please consult your doctor'\n"
-            "4. NEVER provide legal advice - say 'Please consult a lawyer'\n"
-            "5. NEVER provide financial advice - say 'Please consult a financial advisor'\n"
-            "6. For emergencies, say 'Please call 112 immediately'\n"
-            "7. Collect information: name, issue, details, date, address, phone\n"
-            "8. Confirm understanding by repeating back\n"
-            "9. Be calm, patient, and respectful\n"
-            "10. Use simple words\n"
-            "11. Never say you are AI - say 'I am a support assistant'\n"
-            "12. If confidence is low, offer to transfer to human agent"
-        )
+            if user_id > 0:
+                try:
+                    history = get_chat_history(user_id, session_id, limit=10)
+                    for msg in reversed(history):
+                        role = "user" if msg["message_role"] == "user" else "assistant"
+                        messages.append({"role": role, "content": msg["message_text"]})
+                except Exception:
+                    pass
 
-        if user_name:
-            system_prompt += f"\n\nThe user's name is {user_name}. Use it in conversation."
+            messages.append({"role": "user", "content": req.text})
 
-        messages = [{"role": "system", "content": system_prompt}]
-        if user_id > 0:
-            try:
-                history = get_chat_history(user_id, session_id, limit=10)
-                for msg in reversed(history):
-                    role = "user" if msg["message_role"] == "user" else "assistant"
-                    messages.append({"role": role, "content": msg["message_text"]})
-            except Exception:
-                pass
-        messages.append({"role": "user", "content": req.text})
+            response_obj = await client.chat.completions.create(
+                model=config.openai_model,
+                messages=messages,
+                max_tokens=200,
+                temperature=0.7,
+            )
 
-        response_obj = await client.chat.completions.create(
-            model=config.openai_model,
-            messages=messages,
-            max_tokens=150,
-            temperature=0.7,
-        )
+            response = response_obj.choices[0].message.content
 
-        response = response_obj.choices[0].message.content
+            if user_id > 0:
+                try:
+                    save_chat_message(user_id, session_id, "user", text)
+                    save_chat_message(user_id, session_id, "ai", response)
+                except Exception:
+                    pass
 
-        if user_id > 0:
-            try:
-                save_chat_message(user_id, session_id, "ai", response)
-            except Exception:
-                pass
+            return {
+                "input": req.text,
+                "response": response,
+                "call_id": call_id,
+                "session_id": session_id,
+                "mode": "live",
+            }
 
-        return {
-            "input": req.text,
-            "response": response,
-            "call_id": call_id,
-            "session_id": session_id,
-            "mode": "live",
-        }
+        except Exception as e:
+            logger.error("openai_error", error=str(e))
 
-    except Exception as e:
-        logger.error("test_endpoint_error", error=str(e))
-        intent, fallback_response = agent.get_response(text)
-        return {
-            "input": req.text,
-            "response": fallback_response,
-            "call_id": call_id,
-            "session_id": session_id,
-            "mode": "fallback",
-        }
+    response = agent.chat(text, session_id)
+
+    if user_id > 0:
+        try:
+            save_chat_message(user_id, session_id, "user", text)
+            save_chat_message(user_id, session_id, "ai", response)
+        except Exception:
+            pass
+
+    return {
+        "input": req.text,
+        "response": response,
+        "call_id": call_id,
+        "session_id": session_id,
+        "mode": "smart_agent",
+    }
 
 
 class VoiceSessionRequest(BaseModel):

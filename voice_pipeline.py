@@ -610,7 +610,8 @@ class VoicePipeline:
 
     async def generate_response(self, session: ConversationState) -> str:
         if not config.openai_api_key or config.openai_api_key.startswith("dummy"):
-            return self.flow_engine.process_turn(session, session.last_user_input, session.confidence)
+            from main import agent
+            return agent.chat(session.last_user_input, session.session_id)
 
         try:
             from openai import AsyncOpenAI
@@ -714,6 +715,12 @@ IF SENTIMENT NEGATIVE: Acknowledge feelings first"""
             return None
 
     async def process_text_input(self, session: ConversationState, text: str) -> dict:
+        session.last_user_input = text
+        session.add_user_message(text)
+        
+        detected_lang = self.flow_engine.detect_language(text)
+        session.detected_language = detected_lang
+        
         response_text = await self.generate_response(session)
 
         progress = session.get_info_collection_progress()
