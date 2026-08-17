@@ -4156,7 +4156,7 @@
             // Show typing indicator
             showTypingIndicator();
 
-            var userId = currentUser ? (currentUser.user_id || 0) : 0;
+            var userId = currentUser ? (parseInt(currentUser.user_id) || 0) : 0;
 
             // Call API
             fetch('/test', {
