@@ -787,29 +787,84 @@ async def agora_agent_config():
 
 @app.post("/api/agora/channel/start")
 async def agora_channel_start(req: VoiceSessionRequest):
-    channel_name = req.session_id or f"kataru-{uuid.uuid4().hex[:8]}"
-    return agora_agent.start_channel(channel_name, req.user_id)
+    result = agora_agent.start_session(req.session_id, req.user_id)
+    return result
 
 
-@app.post("/api/agora/channel/end/{channel_name}")
-async def agora_channel_end(channel_name: str):
-    return agora_agent.end_channel(channel_name)
+@app.post("/api/agora/channel/end/{session_id}")
+async def agora_channel_end(session_id: str):
+    return agora_agent.end_session(session_id)
 
 
-@app.get("/api/agora/channel/{channel_name}")
-async def agora_channel_status(channel_name: str):
-    return agora_agent.get_channel_status(channel_name)
+@app.get("/api/agora/channel/{session_id}")
+async def agora_channel_status(session_id: str):
+    return agora_agent.get_session_status(session_id)
+
+
+@app.get("/api/agora/sessions")
+async def agora_sessions():
+    return {
+        "active": agora_agent.get_all_sessions(),
+        "completed": agora_agent.get_completed_sessions(),
+    }
+
+
+@app.post("/api/agora/interrupt/{session_id}")
+async def agora_interrupt(session_id: str):
+    return agora_agent.handle_interruption(session_id)
+
+
+@app.post("/api/agora/backchannel/{session_id}")
+async def agora_backchannel(session_id: str):
+    return agora_agent.handle_backchannel(session_id)
+
+
+@app.post("/api/agora/collect/{session_id}")
+async def agora_collect(session_id: str, req: ContextRequest):
+    return agora_agent.collect_information(session_id, req.key, req.value)
 
 
 @app.get("/api/voice/status")
 async def voice_status():
+    sessions = []
+    for sid, session in voice_pipeline.sessions.items():
+        sessions.append({
+            "session_id": sid,
+            "phase": session.phase.value,
+            "language": session.detected_language,
+            "collected_info": {k: v for k, v in session.collected_info.items() if v},
+            "interruptions": session.interruption_count,
+            "duration": round(time.time() - session.started_at, 1),
+        })
+
     return {
         "pipeline": "active",
-        "sessions": len(voice_pipeline.sessions),
+        "active_sessions": len(voice_pipeline.sessions),
+        "sessions": sessions,
         "agora_configured": agora_agent.config.is_configured(),
         "stt": "deepgram" if config.deepgram_api_key and not config.deepgram_api_key.startswith("dummy") else "browser",
-        "llm": "openai" if config.openai_api_key and not config.openai_api_key.startswith("dummy") else "research",
+        "llm": "openai" if config.openai_api_key and not config.openai_api_key.startswith("dummy") else "flow_engine",
         "tts": "elevenlabs" if config.elevenlabs_api_key and not config.elevenlabs_api_key.startswith("dummy") else "browser",
+    }
+
+
+@app.get("/api/voice/session/{session_id}")
+async def voice_session_status(session_id: str):
+    if session_id not in voice_pipeline.sessions:
+        return {"active": False}
+
+    session = voice_pipeline.sessions[session_id]
+    return {
+        "active": True,
+        "session_id": session_id,
+        "phase": session.phase.value,
+        "language": session.detected_language,
+        "collected_info": {k: v for k, v in session.collected_info.items() if v},
+        "info_progress": session.get_info_collection_progress(),
+        "interruptions": session.interruption_count,
+        "backchannels": session.backchannel_count,
+        "duration": round(time.time() - session.started_at, 1),
+        "messages": len(session.messages),
     }
 
 
