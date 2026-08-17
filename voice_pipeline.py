@@ -164,7 +164,16 @@ class VoicePipeline:
 
     async def generate_response(self, session: ConversationState) -> str:
         if not config.openai_api_key or config.openai_api_key.startswith("dummy"):
-            return self._generate_demo_response(session)
+            from research import research_engine
+            last_msg = session.last_user_input if session.last_user_input else ""
+            if last_msg:
+                result = await research_engine.research(last_msg)
+                response = result["answer"]
+                session.add_ai_message(response)
+                return response
+            response = "Namaste! How can I help you today?"
+            session.add_ai_message(response)
+            return response
 
         try:
             from openai import AsyncOpenAI

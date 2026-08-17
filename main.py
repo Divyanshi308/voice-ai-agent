@@ -25,6 +25,7 @@ from database import (
 )
 from voice_pipeline import voice_pipeline, ConversationState
 from agora_agent import agora_agent
+from research import research_engine
 
 structlog.configure(
     processors=[
@@ -538,16 +539,12 @@ async def test_endpoint(req: ChatRequest):
     user_name = user_context.get("name", "")
 
     if not config.openai_api_key or config.openai_api_key.startswith("dummy"):
-        intent, response = agent.get_response(text)
-
-        if user_name and intent in ["greeting", "farewell"]:
-            if "namaste" in text.lower() or "hello" in text.lower():
-                response = f"Namaste {user_name}! Kya madad chahiye aaj?"
-            elif "thank" in text.lower() or "bye" in text.lower():
-                response = f"Thank you {user_name}! Apna khayal rakhiye."
+        research_result = await research_engine.research(text)
+        response = research_result["answer"]
 
         if user_id > 0:
             try:
+                save_chat_message(user_id, session_id, "user", text)
                 save_chat_message(user_id, session_id, "ai", response)
             except Exception:
                 pass
@@ -557,8 +554,8 @@ async def test_endpoint(req: ChatRequest):
             "response": response,
             "call_id": call_id,
             "session_id": session_id,
-            "mode": "demo",
-            "intent": intent,
+            "mode": "research",
+            "sources": research_result.get("sources", []),
         }
 
     try:
@@ -811,9 +808,15 @@ async def voice_status():
         "sessions": len(voice_pipeline.sessions),
         "agora_configured": agora_agent.config.is_configured(),
         "stt": "deepgram" if config.deepgram_api_key and not config.deepgram_api_key.startswith("dummy") else "browser",
-        "llm": "openai" if config.openai_api_key and not config.openai_api_key.startswith("dummy") else "demo",
+        "llm": "openai" if config.openai_api_key and not config.openai_api_key.startswith("dummy") else "research",
         "tts": "elevenlabs" if config.elevenlabs_api_key and not config.elevenlabs_api_key.startswith("dummy") else "browser",
     }
+
+
+@app.post("/api/research")
+async def research_endpoint(req: ChatRequest):
+    result = await research_engine.research(req.text)
+    return result
 
 
 if __name__ == "__main__":
