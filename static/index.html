@@ -1916,6 +1916,241 @@
             outline: 2px solid var(--primary);
             outline-offset: 2px;
         }
+
+        /* ============================================
+           VOICE MODE STYLES
+           ============================================ */
+        .voice-mode-badge {
+            display: none;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: var(--accent-dim);
+            border: 1px solid rgba(255, 0, 255, 0.3);
+            color: var(--accent);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-left: 8px;
+            animation: voiceBadgePulse 2s ease-in-out infinite;
+        }
+
+        .voice-mode-badge.active {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .voice-mode-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes voiceBadgePulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .voice-toggle-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-md);
+            background: rgba(128, 128, 128, 0.08);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .voice-toggle-btn:hover {
+            background: rgba(128, 128, 128, 0.15);
+            color: var(--text);
+        }
+
+        .voice-toggle-btn.active {
+            background: var(--accent-dim);
+            border-color: rgba(255, 0, 255, 0.3);
+            color: var(--accent);
+        }
+
+        /* Voice mode mic area */
+        .voice-mode-area {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 40px 20px;
+            flex: 1;
+        }
+
+        .voice-mode-area.active {
+            display: flex;
+        }
+
+        .mic-btn {
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #0a0a1a;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+            position: relative;
+            box-shadow: 0 4px 24px var(--primary-dim);
+        }
+
+        .mic-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 32px var(--primary-dim);
+        }
+
+        .mic-btn.recording {
+            background: linear-gradient(135deg, #ff4444, #ff0066);
+            animation: micPulse 1.2s ease-in-out infinite;
+            box-shadow: 0 4px 32px rgba(255, 68, 68, 0.4);
+        }
+
+        @keyframes micPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 4px 32px rgba(255, 68, 68, 0.4); }
+            50% { transform: scale(1.08); box-shadow: 0 4px 48px rgba(255, 68, 68, 0.6); }
+        }
+
+        .mic-btn svg {
+            width: 32px;
+            height: 32px;
+            transition: transform var(--transition-fast);
+        }
+
+        .mic-btn.recording svg {
+            transform: scale(1.1);
+        }
+
+        /* Mic ring animation */
+        .mic-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid var(--accent);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .mic-btn.recording .mic-ring {
+            animation: micRing 1.5s ease-out infinite;
+        }
+
+        .mic-btn.recording .mic-ring:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+
+        @keyframes micRing {
+            0% { transform: scale(1); opacity: 0.6; }
+            100% { transform: scale(2.2); opacity: 0; }
+        }
+
+        .mic-label {
+            font-size: 13px;
+            color: var(--text-dim);
+            font-weight: 500;
+        }
+
+        .mic-label.recording {
+            color: var(--danger);
+            animation: voiceBadgePulse 1s ease-in-out infinite;
+        }
+
+        /* Audio Visualizer Bars */
+        .audio-visualizer {
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 4px;
+            height: 48px;
+            padding: 0 20px;
+        }
+
+        .audio-visualizer.active {
+            display: flex;
+        }
+
+        .audio-bar {
+            width: 4px;
+            height: 4px;
+            background: linear-gradient(to top, var(--primary), var(--accent));
+            border-radius: 2px;
+            transition: height 0.05s ease;
+        }
+
+        /* Voice transcript */
+        .voice-transcript {
+            display: none;
+            max-width: 480px;
+            text-align: center;
+            padding: 12px 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            min-height: 44px;
+        }
+
+        .voice-transcript.active {
+            display: block;
+        }
+
+        .voice-transcript-text {
+            font-size: 14px;
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .voice-transcript-placeholder {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Voice chat input area (hidden in voice mode) */
+        .chat-input-area.voice-hidden {
+            display: none;
+        }
+
+        /* Voice mode container */
+        .chat-voice-area {
+            display: none;
+        }
+
+        .chat-voice-area.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 24px;
+            background: var(--card-bg-solid);
+            border-top: 1px solid var(--border);
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .chat-messages.voice-mode {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
     </style>
 </head>
 <body>
@@ -2123,8 +2358,17 @@
                             <p>
                                 <span class="chat-status-dot"></span>
                                 Online &bull; Always here to help
+                                <span class="voice-mode-badge" id="voiceModeBadge">Voice Mode</span>
                             </p>
                         </div>
+                        <button class="voice-toggle-btn" id="voiceToggleBtn" onclick="toggleVoiceMode()" title="Toggle voice mode">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                <line x1="12" y1="19" x2="12" y2="23"/>
+                                <line x1="8" y1="23" x2="16" y2="23"/>
+                            </svg>
+                        </button>
                     </div>
 
                     <div class="chat-messages" id="chatMessages">
@@ -2148,7 +2392,7 @@
                         <button class="quick-reply" onclick="sendQuickReply('Remind me to exercise')">🏃 Exercise</button>
                     </div>
 
-                    <div class="chat-input-area">
+                    <div class="chat-input-area" id="chatInputArea">
                         <div class="chat-input-wrapper">
                             <input type="text" class="chat-input" id="chatInput"
                                    placeholder="Type your message..."
@@ -2161,6 +2405,32 @@
                                 <polygon points="22 2 15 22 11 13 2 9 22 2"/>
                             </svg>
                         </button>
+                    </div>
+
+                    <div class="chat-voice-area" id="chatVoiceArea">
+                        <div class="audio-visualizer" id="audioVisualizer">
+                            <div class="audio-bar"></div>
+                            <div class="audio-bar"></div>
+                            <div class="audio-bar"></div>
+                            <div class="audio-bar"></div>
+                            <div class="audio-bar"></div>
+                            <div class="audio-bar"></div>
+                            <div class="audio-bar"></div>
+                        </div>
+                        <div class="voice-transcript" id="voiceTranscript">
+                            <span class="voice-transcript-placeholder">Tap the microphone to start speaking</span>
+                        </div>
+                        <button class="mic-btn" id="micBtn" onclick="handleMicClick()" title="Start recording">
+                            <div class="mic-ring"></div>
+                            <div class="mic-ring"></div>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                <line x1="12" y1="19" x2="12" y2="23"/>
+                                <line x1="8" y1="23" x2="16" y2="23"/>
+                            </svg>
+                        </button>
+                        <span class="mic-label" id="micLabel">Tap to speak</span>
                     </div>
                 </div>
             </div>
@@ -3649,6 +3919,445 @@
                     }
                 })
                 .catch(function() {});
+        }
+
+        /* ============================================
+           VOICE MODE STATE
+           ============================================ */
+        var voiceMode = false;
+        var isRecording = false;
+        var voiceWebSocket = null;
+        var mediaRecorder = null;
+        var audioStream = null;
+        var audioContext = null;
+        var analyserNode = null;
+        var audioAnimFrame = null;
+        var speechRecognition = null;
+        var isSpeaking = false;
+        var audioChunks = [];
+
+        /* ============================================
+           VOICE MODE TOGGLE
+           ============================================ */
+        window.toggleVoiceMode = function() {
+            voiceMode = !voiceMode;
+
+            var inputArea = document.getElementById('chatInputArea');
+            var voiceArea = document.getElementById('chatVoiceArea');
+            var toggleBtn = document.getElementById('voiceToggleBtn');
+            var badge = document.getElementById('voiceModeBadge');
+
+            if (voiceMode) {
+                inputArea.classList.add('voice-hidden');
+                voiceArea.classList.add('active');
+                toggleBtn.classList.add('active');
+                badge.classList.add('active');
+            } else {
+                inputArea.classList.remove('voice-hidden');
+                voiceArea.classList.remove('active');
+                toggleBtn.classList.remove('active');
+                badge.classList.remove('active');
+                if (isRecording) {
+                    stopVoiceRecording();
+                }
+            }
+        };
+
+        /* ============================================
+           MICROPHONE CLICK HANDLER
+           ============================================ */
+        window.handleMicClick = function() {
+            if (isRecording) {
+                stopVoiceRecording();
+            } else {
+                startVoiceRecording();
+            }
+        };
+
+        /* ============================================
+           START VOICE RECORDING
+           ============================================ */
+        window.startVoiceRecording = function() {
+            if (isRecording) return;
+
+            if (isSpeaking) {
+                window.speechSynthesis.cancel();
+                isSpeaking = false;
+            }
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(function(stream) {
+                    audioStream = stream;
+                    isRecording = true;
+
+                    var micBtn = document.getElementById('micBtn');
+                    var micLabel = document.getElementById('micLabel');
+                    var visualizer = document.getElementById('audioVisualizer');
+                    var transcript = document.getElementById('voiceTranscript');
+
+                    micBtn.classList.add('recording');
+                    micLabel.classList.add('recording');
+                    micLabel.textContent = 'Listening... Tap to stop';
+                    visualizer.classList.add('active');
+                    transcript.classList.add('active');
+                    transcript.innerHTML = '<span class="voice-transcript-placeholder">Listening...</span>';
+
+                    createAudioVisualizer(stream);
+                    connectVoiceWebSocket();
+                    startBrowserSpeechRecognition();
+                    startMediaRecording(stream);
+                })
+                .catch(function(err) {
+                    console.error('Microphone access denied:', err);
+                    showToast('Microphone access denied. Please allow microphone access.', 'error');
+                });
+        };
+
+        /* ============================================
+           STOP VOICE RECORDING
+           ============================================ */
+        window.stopVoiceRecording = function() {
+            if (!isRecording) return;
+
+            isRecording = false;
+
+            var micBtn = document.getElementById('micBtn');
+            var micLabel = document.getElementById('micLabel');
+            var visualizer = document.getElementById('audioVisualizer');
+
+            micBtn.classList.remove('recording');
+            micLabel.classList.remove('recording');
+            micLabel.textContent = 'Tap to speak';
+            visualizer.classList.remove('active');
+
+            if (audioAnimFrame) {
+                cancelAnimationFrame(audioAnimFrame);
+                audioAnimFrame = null;
+            }
+
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+
+            if (audioStream) {
+                audioStream.getTracks().forEach(function(track) { track.stop(); });
+                audioStream = null;
+            }
+
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+
+            if (speechRecognition) {
+                speechRecognition.stop();
+                speechRecognition = null;
+            }
+
+            if (voiceWebSocket && voiceWebSocket.readyState === WebSocket.OPEN) {
+                voiceWebSocket.send(JSON.stringify({ type: 'end' }));
+                voiceWebSocket.close();
+                voiceWebSocket = null;
+            }
+
+            resetAudioBars();
+        };
+
+        /* ============================================
+           MEDIA RECORDING (send audio chunks)
+           ============================================ */
+        function startMediaRecording(stream) {
+            audioChunks = [];
+
+            var options = { mimeType: 'audio/webm;codecs=opus' };
+            try {
+                mediaRecorder = new MediaRecorder(stream, options);
+            } catch (e) {
+                try {
+                    mediaRecorder = new MediaRecorder(stream);
+                } catch (e2) {
+                    console.error('MediaRecorder not supported');
+                    return;
+                }
+            }
+
+            mediaRecorder.ondataavailable = function(e) {
+                if (e.data.size > 0) {
+                    audioChunks.push(e.data);
+                    if (voiceWebSocket && voiceWebSocket.readyState === WebSocket.OPEN) {
+                        var reader = new FileReader();
+                        reader.onloadend = function() {
+                            var base64 = reader.result.split(',')[1];
+                            voiceWebSocket.send(JSON.stringify({
+                                type: 'audio',
+                                audio: base64
+                            }));
+                        };
+                        reader.readAsDataURL(e.data);
+                    }
+                }
+            };
+
+            mediaRecorder.start(250);
+        }
+
+        /* ============================================
+           BROWSER SPEECH RECOGNITION
+           ============================================ */
+        function startBrowserSpeechRecognition() {
+            var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return;
+
+            speechRecognition = new SpeechRecognition();
+            speechRecognition.continuous = true;
+            speechRecognition.interimResults = true;
+            speechRecognition.lang = 'en-US';
+
+            speechRecognition.onresult = function(event) {
+                var transcriptEl = document.getElementById('voiceTranscript');
+                var interim = '';
+                var final = '';
+
+                for (var i = event.resultIndex; i < event.results.length; i++) {
+                    var text = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        final += text;
+                    } else {
+                        interim += text;
+                    }
+                }
+
+                if (final) {
+                    transcriptEl.innerHTML = '<span class="voice-transcript-text">' + escapeHtml(final) + '</span>';
+                } else if (interim) {
+                    transcriptEl.innerHTML = '<span class="voice-transcript-text" style="opacity:0.7">' + escapeHtml(interim) + '</span>';
+                }
+
+                if (final && voiceWebSocket && voiceWebSocket.readyState === WebSocket.OPEN) {
+                    voiceWebSocket.send(JSON.stringify({ type: 'text', text: final.trim() }));
+                }
+            };
+
+            speechRecognition.onerror = function(event) {
+                if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                    console.warn('Speech recognition error:', event.error);
+                }
+            };
+
+            speechRecognition.onend = function() {
+                if (isRecording && speechRecognition) {
+                    try { speechRecognition.start(); } catch(e) {}
+                }
+            };
+
+            try {
+                speechRecognition.start();
+            } catch(e) {}
+        }
+
+        /* ============================================
+           WEBSOCKET CONNECTION
+           ============================================ */
+        function connectVoiceWebSocket() {
+            if (voiceWebSocket && voiceWebSocket.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            var wsUrl = protocol + '//' + window.location.host + '/ws/voice';
+            var sessionId = currentSessionId || generateSessionId();
+            var userId = currentUser ? currentUser.user_id : 0;
+
+            if (!currentSessionId) currentSessionId = sessionId;
+
+            voiceWebSocket = new WebSocket(wsUrl);
+
+            voiceWebSocket.onopen = function() {
+                voiceWebSocket.send(JSON.stringify({
+                    type: 'init',
+                    session_id: sessionId,
+                    user_id: userId,
+                    language: 'auto'
+                }));
+            };
+
+            voiceWebSocket.onmessage = function(event) {
+                try {
+                    var data = JSON.parse(event.data);
+                    handleVoiceResponse(data);
+                } catch (e) {
+                    console.error('Failed to parse voice response:', e);
+                }
+            };
+
+            voiceWebSocket.onerror = function(err) {
+                console.error('Voice WebSocket error:', err);
+            };
+
+            voiceWebSocket.onclose = function() {
+                if (isRecording) {
+                    setTimeout(function() {
+                        if (isRecording) connectVoiceWebSocket();
+                    }, 2000);
+                }
+            };
+        }
+
+        /* ============================================
+           HANDLE VOICE RESPONSE
+           ============================================ */
+        function handleVoiceResponse(data) {
+            if (data.type === 'transcript' || data.type === 'user_text') {
+                var transcriptEl = document.getElementById('voiceTranscript');
+                if (data.text) {
+                    transcriptEl.innerHTML = '<span class="voice-transcript-text">' + escapeHtml(data.text) + '</span>';
+                }
+            }
+
+            if (data.type === 'assistant_text' || data.type === 'response' || data.type === 'text') {
+                var responseText = data.text || data.response || '';
+                if (responseText) {
+                    appendMessage('assistant', responseText);
+                    storeChatMessage(
+                        currentUser ? currentUser.user_id : 'anonymous',
+                        currentSessionId, 'assistant', responseText
+                    );
+                    playVoiceResponse(responseText);
+                }
+            }
+
+            if (data.type === 'user_message' || data.type === 'user_text') {
+                if (data.text) {
+                    appendMessage('user', data.text);
+                    storeChatMessage(
+                        currentUser ? currentUser.user_id : 'anonymous',
+                        currentSessionId, 'user', data.text
+                    );
+                }
+            }
+        }
+
+        /* ============================================
+           SEND TEXT VIA VOICE PIPELINE
+           ============================================ */
+        window.sendVoiceText = function(text) {
+            if (!text || !text.trim()) return;
+
+            if (voiceWebSocket && voiceWebSocket.readyState === WebSocket.OPEN) {
+                voiceWebSocket.send(JSON.stringify({ type: 'text', text: text.trim() }));
+            } else {
+                fetch('/api/voice/text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: text.trim(),
+                        session_id: currentSessionId || generateSessionId(),
+                        user_id: currentUser ? currentUser.user_id : 'anonymous'
+                    })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var responseText = data.response || data.message || data.text || '';
+                    if (responseText) {
+                        appendMessage('assistant', responseText);
+                        playVoiceResponse(responseText);
+                    }
+                })
+                .catch(function(err) {
+                    console.error('Voice text send failed:', err);
+                    showToast('Failed to send message', 'error');
+                });
+            }
+        };
+
+        /* ============================================
+           TTS PLAYBACK (SpeechSynthesis)
+           ============================================ */
+        window.playVoiceResponse = function(text) {
+            if (!text || !window.speechSynthesis) return;
+
+            window.speechSynthesis.cancel();
+
+            var utterance = new SpeechSynthesisUtterance(text);
+            var speed = currentUser && currentUser.voice_speed ? currentUser.voice_speed : 1;
+            utterance.rate = speed;
+            utterance.pitch = 1;
+            utterance.volume = 1;
+
+            var voices = window.speechSynthesis.getVoices();
+            if (voices.length > 0) {
+                var preferred = voices.find(function(v) {
+                    return v.lang.startsWith('en');
+                });
+                if (preferred) utterance.voice = preferred;
+            }
+
+            utterance.onstart = function() { isSpeaking = true; };
+            utterance.onend = function() { isSpeaking = false; };
+            utterance.onerror = function() { isSpeaking = false; };
+
+            window.speechSynthesis.speak(utterance);
+        };
+
+        /* ============================================
+           AUDIO VISUALIZER
+           ============================================ */
+        window.createAudioVisualizer = function(stream) {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                var source = audioContext.createMediaStreamSource(stream);
+                analyserNode = audioContext.createAnalyser();
+                analyserNode.fftSize = 256;
+                source.connect(analyserNode);
+            } catch (e) {
+                console.warn('Audio visualizer not available:', e);
+                animateFallbackBars();
+                return;
+            }
+
+            var bars = document.querySelectorAll('#audioVisualizer .audio-bar');
+            var bufferLength = analyserNode.frequencyBinCount;
+            var dataArray = new Uint8Array(bufferLength);
+
+            function animateBars() {
+                if (!isRecording) return;
+                audioAnimFrame = requestAnimationFrame(animateBars);
+                analyserNode.getByteFrequencyData(dataArray);
+
+                var step = Math.floor(bufferLength / bars.length);
+                for (var i = 0; i < bars.length; i++) {
+                    var idx = i * step;
+                    var value = dataArray[idx] || 0;
+                    var height = Math.max(4, (value / 255) * 44);
+                    bars[i].style.height = height + 'px';
+                }
+            }
+
+            animateBars();
+        };
+
+        function animateFallbackBars() {
+            var bars = document.querySelectorAll('#audioVisualizer .audio-bar');
+            var phase = 0;
+
+            function animate() {
+                if (!isRecording) return;
+                audioAnimFrame = requestAnimationFrame(animate);
+                phase += 0.15;
+                for (var i = 0; i < bars.length; i++) {
+                    var height = 4 + Math.abs(Math.sin(phase + i * 0.5)) * 30;
+                    bars[i].style.height = height + 'px';
+                }
+            }
+
+            animate();
+        }
+
+        function resetAudioBars() {
+            var bars = document.querySelectorAll('#audioVisualizer .audio-bar');
+            bars.forEach(function(bar) {
+                bar.style.height = '4px';
+            });
         }
 
         /* ============================================

@@ -1,4 +1,6 @@
 import asyncio
+import base64
+import json
 import os
 import time
 import uuid
@@ -8,7 +10,7 @@ from typing import Optional
 
 import structlog
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -21,6 +23,8 @@ from database import (
     save_user_context, get_user_context, delete_chat_session,
     get_user_stats, init_db,
 )
+from voice_pipeline import voice_pipeline, ConversationState
+from agora_agent import agora_agent
 
 structlog.configure(
     processors=[
@@ -627,6 +631,189 @@ async def test_endpoint(req: ChatRequest):
             "session_id": session_id,
             "mode": "fallback",
         }
+
+
+class VoiceSessionRequest(BaseModel):
+    session_id: str = ""
+    user_id: int = 0
+    language: str = "auto"
+
+
+class VoiceTextInput(BaseModel):
+    session_id: str
+    text: str
+    user_id: int = 0
+
+
+@app.post("/api/voice/session")
+async def create_voice_session(req: VoiceSessionRequest):
+    session_id = req.session_id or str(uuid.uuid4())
+    session = voice_pipeline.get_or_create_session(session_id, req.user_id)
+    session.language = req.language
+    return {
+        "success": True,
+        "session_id": session_id,
+        "state": session.state.value,
+        "language": session.language,
+    }
+
+
+@app.post("/api/voice/text")
+async def voice_text_input(req: VoiceTextInput):
+    session = voice_pipeline.get_or_create_session(req.session_id, req.user_id)
+    result = await voice_pipeline.process_text_input(session, req.text)
+
+    if req.user_id > 0:
+        try:
+            save_chat_message(req.user_id, req.session_id, "user", req.text)
+            save_chat_message(req.user_id, req.session_id, "ai", result["response"])
+        except Exception:
+            pass
+
+    return result
+
+
+@app.post("/api/voice/interrupt/{session_id}")
+async def voice_interrupt(session_id: str):
+    session = voice_pipeline.get_or_create_session(session_id)
+    result = voice_pipeline.handle_interruption(session)
+    return result
+
+
+@app.post("/api/voice/end/{session_id}")
+async def voice_end(session_id: str):
+    result = voice_pipeline.end_session(session_id)
+    return result
+
+
+@app.websocket("/ws/voice")
+async def voice_websocket(websocket: WebSocket):
+    await websocket.accept()
+
+    session_id = None
+    session = None
+
+    try:
+        while True:
+            data = await websocket.receive()
+
+            if data["type"] == "websocket.receive":
+                if "text" in data:
+                    message = json.loads(data["text"])
+
+                    if message.get("type") == "init":
+                        session_id = message.get("session_id", str(uuid.uuid4()))
+                        user_id = message.get("user_id", 0)
+                        language = message.get("language", "auto")
+                        session = voice_pipeline.get_or_create_session(session_id, user_id)
+                        session.language = language
+
+                        await websocket.send_json({
+                            "type": "ready",
+                            "session_id": session_id,
+                            "state": "listening",
+                            "language": language,
+                        })
+
+                    elif message.get("type") == "text":
+                        if session:
+                            text = message.get("text", "")
+                            if text:
+                                result = await voice_pipeline.process_text_input(session, text)
+                                await websocket.send_json(result)
+
+                                if session.user_id > 0:
+                                    try:
+                                        save_chat_message(session.user_id, session_id, "user", text)
+                                        save_chat_message(session.user_id, session_id, "ai", result["response"])
+                                    except Exception:
+                                        pass
+
+                    elif message.get("type") == "interrupt":
+                        if session:
+                            result = voice_pipeline.handle_interruption(session)
+                            await websocket.send_json(result)
+
+                    elif message.get("type") == "end":
+                        if session:
+                            result = voice_pipeline.end_session(session_id)
+                            await websocket.send_json(result)
+                        break
+
+                elif "bytes" in data:
+                    if session:
+                        audio_data = data["bytes"]
+                        is_final = message.get("is_final", False) if "message" in data else False
+
+                        result = await voice_pipeline.process_audio_chunk(session, audio_data, is_final)
+                        await websocket.send_json(result)
+
+    except WebSocketDisconnect:
+        if session_id:
+            voice_pipeline.end_session(session_id)
+    except Exception as e:
+        logger.error("voice_websocket_error", error=str(e))
+        try:
+            await websocket.close()
+        except Exception:
+            pass
+
+
+@app.get("/api/agora/token")
+async def agora_token(channel: str = "kataru-voice", uid: int = 0):
+    return agora_agent.get_token(channel, uid)
+
+
+@app.get("/api/agora/agent")
+async def agora_agent_config():
+    return {
+        "configured": agora_agent.config.is_configured(),
+        "agent": agora_agent.create_agent_config(),
+        "features": {
+            "voice": True,
+            "multilingual": True,
+            "interruption_handling": True,
+            "background_noise_resilience": True,
+            "low_confidence_detection": True,
+            "human_escalation": True,
+            "context_preservation": True,
+        },
+        "safety": {
+            "no_medical_diagnosis": True,
+            "no_emergency_replacement": True,
+            "no_legal_advice": True,
+            "no_financial_advice": True,
+            "no_uncertain_facts": True,
+        },
+    }
+
+
+@app.post("/api/agora/channel/start")
+async def agora_channel_start(req: VoiceSessionRequest):
+    channel_name = req.session_id or f"kataru-{uuid.uuid4().hex[:8]}"
+    return agora_agent.start_channel(channel_name, req.user_id)
+
+
+@app.post("/api/agora/channel/end/{channel_name}")
+async def agora_channel_end(channel_name: str):
+    return agora_agent.end_channel(channel_name)
+
+
+@app.get("/api/agora/channel/{channel_name}")
+async def agora_channel_status(channel_name: str):
+    return agora_agent.get_channel_status(channel_name)
+
+
+@app.get("/api/voice/status")
+async def voice_status():
+    return {
+        "pipeline": "active",
+        "sessions": len(voice_pipeline.sessions),
+        "agora_configured": agora_agent.config.is_configured(),
+        "stt": "deepgram" if config.deepgram_api_key and not config.deepgram_api_key.startswith("dummy") else "browser",
+        "llm": "openai" if config.openai_api_key and not config.openai_api_key.startswith("dummy") else "demo",
+        "tts": "elevenlabs" if config.elevenlabs_api_key and not config.elevenlabs_api_key.startswith("dummy") else "browser",
+    }
 
 
 if __name__ == "__main__":
