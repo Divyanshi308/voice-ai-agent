@@ -10,6 +10,5 @@ psycopg[binary]
 pydantic
 pydantic-settings
 python-dotenv
-audioop-lts
 prometheus-client
 structlog
