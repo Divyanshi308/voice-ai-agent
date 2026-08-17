@@ -1,144 +1,234 @@
-# Multilingual Voice AI Agent
+# VoiceShield AI
 
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![OpenAI](https://img.shields.io/badge/OpenAI-412991?logo=openai&logoColor=white)](https://openai.com/)
-[![Deepgram](https://img.shields.io/badge/Deepgram-000000?logo=deepgram&logoColor=white)](https://deepgram.com/)
-[![ElevenLabs](https://img.shields.io/badge/ElevenLabs-6C47FF?logo=elevenlabs&logoColor=white)](https://elevenlabs.io/)
+**Multilingual Voice AI Customer Support Agent**
 
-Real-time conversational voice agent that handles inbound calls with multilingual ASR, LLM-powered dialogue, guardrails, and automated ticketing.
+Built for the [EchoSphere: Agora Conversational AI Hackathon 2026](https://unstop.com/hackathons/echosphere-agora-conversational-ai-hackathon-knotic-1723695)
+
+---
+
+## Problem
+
+Customer service phone lines have long wait times, language barriers, and inconsistent support quality. In India alone, 67% of customers abandon calls due to poor experience. Existing solutions are either expensive human-only systems or basic chatbots that can't handle real conversations.
+
+## Solution
+
+VoiceShield AI is a real-time multilingual voice agent that:
+
+- **Speaks** your language (Hindi, English, Hinglish)
+- **Listens** actively with interruption handling (barge-in)
+- **Remembers** context across the entire conversation
+- **Acts** by creating support tickets and sending SMS notifications
+- **Escalates** to human agents when needed
+
+---
 
 ## Architecture
 
 ```
-                        ┌─────────────────────────────────────────────────────────────┐
-                        │                    Voice AI Agent                           │
-                        │                                                             │
-Caller  ───WebSocket───►│  ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐  │
-  (Telnyx)              │  │   ASR   │───►│   LLM   │───►│ Guard-  │───►│   TTS   │──┼──► Caller
-                        │  │Deepgram │    │ OpenAI  │    │ rails   │    │ElevenLbs│  │
-                        │  └─────────┘    └────┬────┘    └────┬────┘    └─────────┘  │
-                        │                      │              │                       │
-                        │                ┌─────▼──────┐  ┌───▼──────┐                │
-                        │                │  Dialogue   │  │Analytics │                │
-                        │                │  Manager    │  │(PG+Redis)│                │
-                        │                └─────┬──────┘  └──────────┘                │
-                        │                      │                                      │
-                        │                ┌─────▼──────┐    ┌──────────┐               │
-                        │                │ Ticketing   │───►│SMS Notify│               │
-                        │                │ (Zendesk)   │    │ (Twilio) │               │
-                        │                └────────────┘    └──────────┘               │
-                        └─────────────────────────────────────────────────────────────┘
-
-Data Flow:
-  1. Caller audio stream ──► Deepgram Nova-3 (multi-lang ASR)
-  2. Transcript ──► Guardrails (medical/emergency/legal/financial check)
-  3. Safe transcript ──► OpenAI GPT-4o (response + sentiment + intent)
-  4. Response ──► Guardrails (output safety check)
-  5. Safe response ──► ElevenLabs Turbo v2.5 (streaming TTS) ──► Caller
-  6. All events ──► Dialogue Manager (state tracking) ──► Analytics (PostgreSQL + Redis)
-  7. On escalation: Zendesk ticket created + Twilio SMS sent to caller
+┌─────────┐     ┌──────────┐     ┌───────────┐     ┌─────────┐     ┌───────────┐
+│  User   │────▶│ Agora RTC│────▶│  Convo AI │────▶│  GPT-4o │────▶│ ElevenLabs│
+│ (Voice) │◀────│   SDK    │◀────│  Engine   │◀────│   LLM   │◀────│    TTS    │
+└─────────┘     └──────────┘     └───────────┘     └─────────┘     └───────────┘
+                     │                                    │
+                     ▼                                    ▼
+              ┌──────────────┐                    ┌──────────────┐
+              │ Deepgram STT │                    │  Guardrails  │
+              │ (Speech→Text)│                    │  (Safety)    │
+              └──────────────┘                    └──────────────┘
+                                                          │
+                     ┌────────────────────────────────────┤
+                     ▼                                    ▼
+              ┌──────────────┐                    ┌──────────────┐
+              │   Zendesk    │                    │    Twilio    │
+              │  (Tickets)   │                    │   (SMS)      │
+              └──────────────┘                    └──────────────┘
 ```
+
+---
 
 ## Features
 
-1. **Multilingual Support** — Real-time language detection via Deepgram Nova-3 multi-language model; agent responds in the caller's language automatically
-2. **Code-Switching** — Tracks language switches mid-conversation and maintains correct response language throughout the call
-3. **Noise Resilience** — ASR confidence scoring with automatic recovery prompts when audio quality drops below threshold (<0.5 avg confidence triggers escalation)
-4. **Guardrails** — Input/output safety filters blocking medical advice, legal advice, financial advice, and emergency handling with immediate escalation protocols
-5. **Human Escalation** — Automatic warm transfer to human agents when sentiment degrades (3x frustrated, 2x angry), max turns reached, or guardrails triggered
-6. **Zendesk Ticketing** — Auto-creates tickets with full transcript, collected data, intent classification, urgency level, and AI-generated summary on every call
-7. **SMS Notifications** — Sends caller confirmation via Twilio with case number, issue summary, and response timeframe in their detected language
-8. **Conversation Memory** — Sliding-window context (last 10 turns), field auto-extraction (phone/email/location), and structured state tracked per call via Redis
-9. **Sentiment Tracking** — Per-utterance sentiment analysis (calm/stressed/frustrated/angry) with historical trend for escalation decisions
-10. **Real-Time Streaming** — Full-duplex WebSocket audio pipeline with 20ms chunk streaming, barge-in detection, and <300ms first-byte TTS latency
+### Core Voice Features
 
-## Prerequisites
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Real-time Conversation** | Live voice chat via Agora RTC | ✅ |
+| **Interruption Handling** | AI stops when user speaks (barge-in) | ✅ |
+| **Streaming Response** | AI speaks while still generating | ✅ |
+| **Instant Acknowledgment** | "Let me check that..." within 200ms | ✅ |
+| **Backchanneling** | "mhm", "I see", "go on" while listening | ✅ |
+| **Context Memory** | Remembers earlier conversation points | ✅ |
+| **Emotional Intelligence** | Voice adapts to user sentiment | ✅ |
+| **Multilingual** | Hindi + English + Hinglish | ✅ |
 
-- Python 3.11+
-- Docker & Docker Compose
-- API keys for:
-  - [Deepgram](https://console.deepgram.com/) — Speech-to-Text
-  - [OpenAI](https://platform.openai.com/) — LLM
-  - [ElevenLabs](https://elevenlabs.io/) — Text-to-Speech
-  - [Zendesk](https://www.zendesk.com/) — Ticketing (optional)
-  - [Twilio](https://www.twilio.com/) — SMS notifications (optional)
-  - [Telnyx](https://www.telnyx.com/) — Telephony (optional, for production)
+### Safety & Intelligence
+
+| Feature | Description |
+|---------|-------------|
+| **Guardrails** | Blocks medical/legal advice |
+| **Emergency Detection** | Auto-escalates to 112/911 |
+| **Sentiment Analysis** | Detects frustrated/angry/calm users |
+| **Confidence Tracking** | Knows when audio quality is poor |
+| **Human Escalation** | Transfers to human when needed |
+
+### Integrations
+
+| Service | Purpose |
+|---------|---------|
+| **Agora RTC** | Real-time voice transmission |
+| **Agora Convo AI** | STT → LLM → TTS orchestration |
+| **OpenAI GPT-4o** | AI brain for conversation |
+| **ElevenLabs** | Natural text-to-speech |
+| **Deepgram** | Speech-to-text |
+| **Zendesk** | Support ticket creation |
+| **Twilio** | SMS notifications |
+
+---
+
+## Tech Stack
+
+```
+Frontend:  HTML5, CSS3, JavaScript, Three.js, Agora Web SDK
+Backend:   Python 3.11+, FastAPI, WebSocket
+AI:        OpenAI GPT-4o, ElevenLabs TTS, Deepgram STT
+Voice:     Agora Conversational AI Engine, Agora RTC SDK
+Database:  PostgreSQL, Redis
+Hosting:   Render (free tier)
+```
+
+---
 
 ## Quick Start
 
-```bash
-git clone https://github.com/you/voice-ai-agent
-cd voice-ai-agent && cp .env.example .env  # fill in your API keys
-docker-compose up
-```
-
-Server starts at `http://localhost:8000`. Test endpoint:
+### 1. Clone
 
 ```bash
-curl -X POST http://localhost:8000/test \
-  -H "Content-Type: application/json" \
-  -d '{"text": "Hello, I need help with my billing"}'
+git clone https://github.com/Divyanshi308/voice-ai-agent.git
+cd voice-ai-agent
 ```
 
-## Environment Variables
-
-| Variable | Required | Description |
-|---|---|---|
-| `DEEPGRAM_API_KEY` | Yes | Deepgram API key for speech-to-text |
-| `OPENAI_API_KEY` | Yes | OpenAI API key for GPT-4o LLM |
-| `OPENAI_MODEL` | No | Model name (default: `gpt-4o`) |
-| `ELEVENLABS_API_KEY` | Yes | ElevenLabs API key for text-to-speech |
-| `ELEVENLABS_VOICE_ID` | No | Voice ID (default: `rachel`) |
-| `ELEVENLABS_MODEL` | No | TTS model (default: `eleven_turbo_v2_5`) |
-| `REDIS_URL` | Yes | Redis connection string (default: `redis://localhost:6379`) |
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `PORT` | No | Server port (default: `8000`) |
-| `HOST` | No | Server host (default: `0.0.0.0`) |
-| `LOG_LEVEL` | No | Logging level (default: `INFO`) |
-| `ENVIRONMENT` | No | `development`, `staging`, or `production` |
-| `TELNYX_API_KEY` | No | Telnyx API key for telephony |
-| `TELNYX_PHONE_NUMBER` | No | Telnyx purchased phone number (E.164) |
-| `ZENDESK_API_KEY` | No | Zendesk API token |
-| `ZENDESK_EMAIL` | No | Zendesk agent email for API auth |
-| `ZENDESK_SUBDOMAIN` | No | Zendesk subdomain (`yourcompany.zendesk.com`) |
-| `TWILIO_ACCOUNT_SID` | No | Twilio account SID |
-| `TWILIO_AUTH_TOKEN` | No | Twilio auth token |
-| `TWILIO_PHONE_NUMBER` | No | Twilio purchased phone number (E.164) |
-| `HUMAN_TRANSFER_NUMBER` | No | Human agent phone number for warm transfer |
-| `HUMAN_AGENT_NAME` | No | Human agent name for handoff message |
-| `ESCALATION_CONFIDENCE_THRESHOLD` | No | Escalate below this ASR confidence (default: `0.7`) |
-| `MAX_TURNS_BEFORE_ESCALATION` | No | Force escalation after N turns (default: `10`) |
-| `EMERGENCY_NUMBERS` | No | Comma-separated emergency numbers (default: `112,911`) |
-
-## Testing
+### 2. Install
 
 ```bash
-pytest tests/ -v
+python -m venv venv
+venv\Scripts\activate  # Windows
+pip install -r requirements.txt
 ```
 
-## Deployment
+### 3. Configure
 
-| Option | Command | Notes |
-|---|---|---|
-| **Local** | `python main.py` | Requires local Redis + PostgreSQL |
-| **Docker** | `docker-compose up` | All services bundled; recommended for dev/staging |
-| **AWS** | ECS Fargate or EC2 + RDS + ElastiCache | Use ALB for WebSocket support; enable CloudWatch logging |
-| **GCP** | Cloud Run + Cloud SQL + Memorystore | Cloud Run supports WebSockets natively |
-| **Azure** | Container Apps + Azure Database for PostgreSQL + Azure Cache | Use Dapr sidecar for service discovery |
+Copy `.env.example` to `.env` and add your API keys:
 
-## Cost Estimate
+```env
+AGORA_APP_ID=your_agora_app_id
+AGORA_APP_CERTIFICATE=your_agora_app_certificate
+OPENAI_API_KEY=your_openai_key
+ELEVENLABS_API_KEY=your_elevenlabs_key
+DEEPGRAM_API_KEY=your_deepgram_key
+```
 
-| Component | Per 5-min call |
-|---|---|
-| Deepgram Nova-3 | ~$0.008 |
-| OpenAI GPT-4o | ~$0.02-0.04 |
-| ElevenLabs Turbo v2.5 | ~$0.01-0.02 |
-| Zendesk API | Free tier |
-| Twilio SMS | ~$0.008 |
-| **Total per call** | **$0.05 - $0.08** |
+### 4. Run
 
-*Estimates based on ~15 turns, 200-word average response length, gpt-4o pricing.*
+```bash
+python main.py
+```
+
+Open http://localhost:8000
+
+---
+
+## Demo
+
+**Live Demo:** https://voice-ai-agent.onrender.com
+
+### What to Try
+
+1. **Click the microphone** → Start a voice conversation
+2. **Say "I need help with my bill"** → AI responds with empathy
+3. **Interrupt the AI** → It stops and listens (barge-in)
+4. **Say "my name is Rahul"** → AI remembers your name
+5. **Say "what's my name?"** → AI recalls from context
+
+---
+
+## How Agora Is Used
+
+### Agora Conversational AI Engine
+- Primary orchestration layer for STT → LLM → TTS pipeline
+- Handles real-time voice capture and delivery
+- Manages interruption detection and response
+
+### Agora RTC SDK
+- Real-time audio transmission between client and server
+- Low-latency voice streaming (< 500ms)
+- Connection quality monitoring
+
+### Integration Flow
+
+```
+1. User speaks into microphone
+2. Agora RTC captures audio → sends to server
+3. Agora Convo AI Engine processes:
+   a. Deepgram converts speech to text
+   b. GPT-4o generates response
+   c. ElevenLabs converts text to speech
+4. Agora RTC streams audio back to user
+5. Total latency: < 800ms end-to-end
+```
+
+---
+
+## Project Structure
+
+```
+voice-ai-agent/
+├── main.py                 # FastAPI server + WebSocket handlers
+├── pipeline.py             # Core conversation pipeline with interruption handling
+├── llm.py                  # GPT-4o engine with streaming
+├── tts.py                  # ElevenLabs TTS with emotional voice
+├── asr.py                  # Deepgram speech-to-text
+├── guardrails.py           # Safety guardrails
+├── dialogue.py             # Conversation state manager
+├── ticketing.py            # Zendesk integration
+├── notifications.py        # Twilio SMS
+├── analytics.py            # PostgreSQL + Redis logging
+├── config.py               # Pydantic settings
+├── agora_integration.py    # Agora token generation
+├── static/
+│   └── index.html          # 3D dashboard with voice interface
+├── tests/
+│   └── test_pipeline.py    # Unit tests
+├── Dockerfile              # Container build
+├── requirements.txt        # Python dependencies
+└── .env                    # Environment variables
+```
+
+---
+
+## Known Limitations
+
+- Free tier has 300-second call limit
+- Requires microphone permission in browser
+- Voice quality depends on network latency
+- Agora free tier has limited concurrent users
+
+---
+
+## Team
+
+- **Divyanshi** - Developer
+
+---
+
+## Acknowledgments
+
+- [Agora](https://www.agora.io) for Conversational AI Platform
+- [OpenAI](https://openai.com) for GPT-4o
+- [ElevenLabs](https://elevenlabs.io) for Natural TTS
+- [Deepgram](https://deepgram.com) for Speech-to-Text
+- [KNOTiC](https://knotichq.com) for organizing EchoSphere 2026
+
+---
 
 ## License
 

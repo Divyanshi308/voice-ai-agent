@@ -13,30 +13,55 @@ class TextToSpeech:
         self.is_playing = False
         self.cache = {}
 
-    async def stream_speech(self, text: str, on_audio_chunk: Callable, language: str = "en"):
+        self.emotion_settings = {
+            "calm": {"stability": 0.65, "clarity": 0.75, "style": 0.3},
+            "stressed": {"stability": 0.5, "clarity": 0.85, "style": 0.15},
+            "frustrated": {"stability": 0.45, "clarity": 0.9, "style": 0.1},
+            "angry": {"stability": 0.4, "clarity": 0.95, "style": 0.05},
+            "happy": {"stability": 0.7, "clarity": 0.7, "style": 0.5},
+        }
+
+    async def stream_speech(
+        self,
+        text: str,
+        on_audio_chunk: Callable,
+        language: str = "en",
+        sentiment: str = "calm",
+    ):
         clean_text = self._clean_for_voice(text)
 
-        if clean_text in self.cache:
-            for chunk in self.cache[clean_text]:
+        cache_key = f"{clean_text}_{sentiment}"
+        if cache_key in self.cache:
+            for chunk in self.cache[cache_key]:
                 await on_audio_chunk(chunk)
             return
 
         self.is_playing = True
 
         try:
+            settings = self.emotion_settings.get(
+                sentiment, self.emotion_settings["calm"]
+            )
+
             audio_stream = await self.client.generate(
                 text=clean_text,
                 voice=self.voice_id,
                 model=config.elevenlabs_model,
+                voice_settings=settings,
             )
 
+            chunks = []
             if isinstance(audio_stream, bytes):
                 await on_audio_chunk(audio_stream)
+                chunks.append(audio_stream)
             else:
                 async for chunk in audio_stream:
                     if chunk and self.is_playing:
                         if isinstance(chunk, bytes):
                             await on_audio_chunk(chunk)
+                            chunks.append(chunk)
+
+            self.cache[cache_key] = chunks
 
         except Exception as e:
             print(f"TTS error: {e}")
@@ -66,6 +91,9 @@ class TextToSpeech:
             "I'm connecting you with a specialist.",
             "Can you please repeat that?",
             "Thank you for your patience.",
+            "Let me check that for you...",
+            "I understand, let me help you right away...",
+            "Got it, one moment...",
         ]
         for phrase in phrases:
             try:

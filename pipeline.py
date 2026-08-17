@@ -2,6 +2,7 @@ import asyncio
 import time
 import uuid
 import structlog
+from typing import Callable, Optional
 
 from config import config
 from asr import SpeechToText
@@ -16,6 +17,18 @@ from analytics import AnalyticsLogger
 logger = structlog.get_logger()
 
 MAX_CALL_DURATION_SECONDS = 300
+
+BACKCHANNEL_PHRASES = [
+    "mhm", "I see", "got it", "right", "go on", "okay", "I understand"
+]
+
+INSTANT_ACKNOWLEDGMENTS = [
+    "Let me check that for you...",
+    "One moment please...",
+    "Looking into that...",
+    "Great question, let me find out...",
+    "I'm on it...",
+]
 
 
 class AudioPipeline:
@@ -58,6 +71,11 @@ class AudioPipeline:
             "send_audio": send_audio_fn,
             "transcript_log": [],
             "ticket_id": None,
+            "is_ai_speaking": False,
+            "is_processing": False,
+            "backchannel_count": 0,
+            "last_backchannel": 0,
+            "interruption_count": 0,
         }
 
         await self.analytics.log_call_start(call_id, caller_id)
@@ -134,7 +152,17 @@ class AudioPipeline:
             confidence=confidence,
         )
 
-        self.tts.stop()
+        if call_data["is_ai_speaking"]:
+            call_data["interruption_count"] += 1
+            self.tts.stop()
+            call_data["is_ai_speaking"] = False
+            logger.info(
+                "interruption_detected",
+                call_id=call_id,
+                interruption_count=call_data["interruption_count"],
+            )
+
+        call_data["is_processing"] = True
 
         safety = self.guardrails.check_input(text)
         if safety["triggered"]:
@@ -171,6 +199,10 @@ class AudioPipeline:
             await self._escalate(call_id)
             return
 
+        asyncio.create_task(
+            self._send_instant_ack(call_id, sentiment)
+        )
+
         next_question = self.dialogue.get_next_question(state)
         if next_question and state["turn_count"] > 0:
             collected = state.get("collected_fields", {})
@@ -185,10 +217,18 @@ class AudioPipeline:
         else:
             prompt = text
 
+        context_callback = self._get_context_callback(state, text)
+        if context_callback:
+            prompt = f"{context_callback} {prompt}"
+
         full_response = ""
         try:
             history = state["conversation_history"][-10:]
             async for token in self.llm.get_response(prompt, history, state):
+                if call_id not in self.active_calls:
+                    break
+                if not call_data["is_ai_speaking"]:
+                    call_data["is_ai_speaking"] = True
                 full_response += token
         except Exception as e:
             logger.error("llm_error", call_id=call_id, error=str(e))
@@ -213,7 +253,42 @@ class AudioPipeline:
 
         self.dialogue.store_ai_response(state, final_response)
 
+        call_data["is_processing"] = False
+        call_data["is_ai_speaking"] = True
         await self._speak(call_id, final_response, state.get("current_language", "en"))
+        call_data["is_ai_speaking"] = False
+
+    async def _send_instant_ack(self, call_id: str, sentiment: str) -> None:
+        if call_id not in self.active_calls:
+            return
+
+        import random
+        ack = random.choice(INSTANT_ACKNOWLEDGMENTS)
+
+        if sentiment in ("frustrated", "angry"):
+            ack = "I understand, let me help you right away..."
+
+        await self._speak(call_id, ack, "en")
+
+    def _get_context_callback(self, state: dict, current_text: str) -> Optional[str]:
+        history = state.get("conversation_history", [])
+        if len(history) < 2:
+            return None
+
+        user_messages = [h for h in history if h.get("role") == "user"]
+        if len(user_messages) < 2:
+            return None
+
+        earlier = user_messages[-2].get("content", "")
+        if not earlier:
+            return None
+
+        keywords = ["bill", "account", "number", "name", "date", "address", "price", "order"]
+        for keyword in keywords:
+            if keyword in earlier.lower():
+                return f"Earlier the caller mentioned: '{earlier[:50]}...'."
+
+        return None
 
     async def _speak(self, call_id: str, text: str, language: str = "en") -> None:
         if call_id not in self.active_calls:
