@@ -2,7 +2,6 @@ fastapi
 uvicorn[standard]
 websockets
 openai
-elevenlabs
 httpx
 twilio
 redis
@@ -12,3 +11,5 @@ pydantic-settings
 python-dotenv
 prometheus-client
 structlog
+agora-agents
+elevenlabs

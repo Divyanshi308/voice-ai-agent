@@ -1,6 +1,6 @@
-# VoiceShield AI
+# VoxAssist
 
-**Multilingual Voice AI Customer Support Agent**
+**AI That Speaks, Listens, and Cares**
 
 Built for the [EchoSphere: Agora Conversational AI Hackathon 2026](https://unstop.com/hackathons/echosphere-agora-conversational-ai-hackathon-knotic-1723695)
 
@@ -8,93 +8,84 @@ Built for the [EchoSphere: Agora Conversational AI Hackathon 2026](https://unsto
 
 ## Problem
 
-Customer service phone lines have long wait times, language barriers, and inconsistent support quality. In India alone, 67% of customers abandon calls due to poor experience. Existing solutions are either expensive human-only systems or basic chatbots that can't handle real conversations.
+In India, over 150 million elderly people live alone or with aging spouses. They struggle with:
+- **Medicine management** - Forgetting to take medications on time
+- **Daily tasks** - Difficulty with grocery shopping, bill payments, appointments
+- **Emergency situations** - No one to call when they need immediate help
+- **Loneliness** - Lack of companionship and social interaction
+
+Existing solutions are either expensive human caregivers or basic reminder apps that can't hold real conversations.
 
 ## Solution
 
-VoiceShield AI is a real-time multilingual voice agent that:
-
-- **Speaks** your language (Hindi, English, Hinglish)
-- **Listens** actively with interruption handling (barge-in)
-- **Remembers** context across the entire conversation
-- **Acts** by creating support tickets and sending SMS notifications
-- **Escalates** to human agents when needed
+VoxAssist is a multilingual voice AI agent that:
+- **Speaks naturally** in Hindi, English, or Hinglish
+- **Remembers** your medications, appointments, and preferences
+- **Detects emergencies** and provides immediate guidance
+- **Adapts** its voice tone based on your emotional state
+- **Interrupts gracefully** - you can barge in anytime
 
 ---
 
 ## Architecture
 
 ```
-┌─────────┐     ┌──────────┐     ┌───────────┐     ┌─────────┐     ┌───────────┐
-│  User   │────▶│ Agora RTC│────▶│  Convo AI │────▶│  GPT-4o │────▶│ ElevenLabs│
-│ (Voice) │◀────│   SDK    │◀────│  Engine   │◀────│   LLM   │◀────│    TTS    │
-└─────────┘     └──────────┘     └───────────┘     └─────────┘     └───────────┘
-                     │                                    │
-                     ▼                                    ▼
-              ┌──────────────┐                    ┌──────────────┐
-              │ Deepgram STT │                    │  Guardrails  │
-              │ (Speech→Text)│                    │  (Safety)    │
-              └──────────────┘                    └──────────────┘
-                                                          │
-                     ┌────────────────────────────────────┤
-                     ▼                                    ▼
-              ┌──────────────┐                    ┌──────────────┐
-              │   Zendesk    │                    │    Twilio    │
-              │  (Tickets)   │                    │   (SMS)      │
-              └──────────────┘                    └──────────────┘
+┌─────────────┐     ┌──────────┐     ┌──────────────┐     ┌─────────┐
+│   Elderly   │────▶│  Agora   │────▶│   Agora      │────▶│  GPT-4o │
+│   User      │◀────│   RTC    │◀────│   ConvoAI    │◀────│   LLM   │
+│   (Voice)   │     │   SDK    │     │   Engine     │     │         │
+└─────────────┘     └──────────┘     └──────────────┘     └─────────┘
+                           │                  │
+                           │                  │
+                     ┌─────┴──────┐     ┌─────┴──────┐
+                     │  Deepgram  │     │ ElevenLabs │
+                     │  STT       │     │  TTS       │
+                     └────────────┘     └────────────┘
 ```
+
+### How It Works
+
+1. **User speaks** into their phone/device
+2. **Agora RTC** captures audio with low latency (<500ms)
+3. **Agora ConvoAI Engine** orchestrates the pipeline:
+   - Deepgram converts speech to text
+   - GPT-4o generates appropriate response
+   - ElevenLabs converts text to natural speech
+4. **Response streams** back through Agora RTC
+5. **Total latency**: <800ms end-to-end
+
+### Key Agora Features Used
+
+| Feature | Purpose |
+|---------|---------|
+| **Agora ConvoAI Engine** | Orchestrates STT → LLM → TTS pipeline |
+| **Agora RTC SDK** | Real-time audio streaming |
+| **Interruption Detection** | User can barge in while AI speaks |
+| **Turn Detection** | Knows when user starts/stops speaking |
+| **Multilingual STT** | Hindi + English + Hinglish recognition |
 
 ---
 
 ## Features
 
-### Core Voice Features
+### Voice Features
+- **Real-time conversation** via Agora Conversational AI
+- **Interruption handling** - barge in anytime
+- **Streaming response** - AI speaks while generating
+- **Multilingual** - Hindi, English, Hinglish
+- **Natural voice** - ElevenLabs emotional TTS
 
-| Feature | Description | Status |
-|---------|-------------|--------|
-| **Real-time Conversation** | Live voice chat via Agora RTC | ✅ |
-| **Interruption Handling** | AI stops when user speaks (barge-in) | ✅ |
-| **Streaming Response** | AI speaks while still generating | ✅ |
-| **Instant Acknowledgment** | "Let me check that..." within 200ms | ✅ |
-| **Backchanneling** | "mhm", "I see", "go on" while listening | ✅ |
-| **Context Memory** | Remembers earlier conversation points | ✅ |
-| **Emotional Intelligence** | Voice adapts to user sentiment | ✅ |
-| **Multilingual** | Hindi + English + Hinglish | ✅ |
+### Safety Features
+- **Emergency detection** - Auto-provides emergency numbers
+- **Medicine reminders** - Tracks medication schedules
+- **Guardrails** - Blocks harmful advice
+- **Human escalation** - Transfers to real person when needed
 
-### Safety & Intelligence
-
-| Feature | Description |
-|---------|-------------|
-| **Guardrails** | Blocks medical/legal advice |
-| **Emergency Detection** | Auto-escalates to 112/911 |
-| **Sentiment Analysis** | Detects frustrated/angry/calm users |
-| **Confidence Tracking** | Knows when audio quality is poor |
-| **Human Escalation** | Transfers to human when needed |
-
-### Integrations
-
-| Service | Purpose |
-|---------|---------|
-| **Agora RTC** | Real-time voice transmission |
-| **Agora Convo AI** | STT → LLM → TTS orchestration |
-| **OpenAI GPT-4o** | AI brain for conversation |
-| **ElevenLabs** | Natural text-to-speech |
-| **Deepgram** | Speech-to-text |
-| **Zendesk** | Support ticket creation |
-| **Twilio** | SMS notifications |
-
----
-
-## Tech Stack
-
-```
-Frontend:  HTML5, CSS3, JavaScript, Three.js, Agora Web SDK
-Backend:   Python 3.11+, FastAPI, WebSocket
-AI:        OpenAI GPT-4o, ElevenLabs TTS, Deepgram STT
-Voice:     Agora Conversational AI Engine, Agora RTC SDK
-Database:  PostgreSQL, Redis
-Hosting:   Render (free tier)
-```
+### Intelligence Features
+- **Context memory** - Remembers conversation history
+- **Sentiment analysis** - Detects emotional state
+- **Intent classification** - Understands what user wants
+- **Confidence tracking** - Knows when audio is unclear
 
 ---
 
@@ -120,8 +111,11 @@ pip install -r requirements.txt
 Copy `.env.example` to `.env` and add your API keys:
 
 ```env
+# REQUIRED - Agora Conversational AI
 AGORA_APP_ID=your_agora_app_id
 AGORA_APP_CERTIFICATE=your_agora_app_certificate
+
+# Optional - BYOK (Bring Your Own Keys)
 OPENAI_API_KEY=your_openai_key
 ELEVENLABS_API_KEY=your_elevenlabs_key
 DEEPGRAM_API_KEY=your_deepgram_key
@@ -144,36 +138,23 @@ Open http://localhost:8000
 ### What to Try
 
 1. **Click the microphone** → Start a voice conversation
-2. **Say "I need help with my bill"** → AI responds with empathy
-3. **Interrupt the AI** → It stops and listens (barge-in)
-4. **Say "my name is Rahul"** → AI remembers your name
-5. **Say "what's my name?"** → AI recalls from context
+2. **Say "Namaste"** → AI responds in Hindi
+3. **Say "I need my medicine"** → AI helps with medicine reminder
+4. **Interrupt the AI** → It stops and listens (barge-in)
+5. **Switch languages** → AI follows your language choice
 
 ---
 
-## How Agora Is Used
-
-### Agora Conversational AI Engine
-- Primary orchestration layer for STT → LLM → TTS pipeline
-- Handles real-time voice capture and delivery
-- Manages interruption detection and response
-
-### Agora RTC SDK
-- Real-time audio transmission between client and server
-- Low-latency voice streaming (< 500ms)
-- Connection quality monitoring
-
-### Integration Flow
+## Tech Stack
 
 ```
-1. User speaks into microphone
-2. Agora RTC captures audio → sends to server
-3. Agora Convo AI Engine processes:
-   a. Deepgram converts speech to text
-   b. GPT-4o generates response
-   c. ElevenLabs converts text to speech
-4. Agora RTC streams audio back to user
-5. Total latency: < 800ms end-to-end
+Frontend:  HTML5, CSS3, JavaScript, Three.js
+Backend:   Python 3.11+, FastAPI
+Voice:     Agora Conversational AI Engine
+STT:       Deepgram (via Agora)
+LLM:       OpenAI GPT-4o
+TTS:       ElevenLabs (via Agora)
+Hosting:   Render (free tier)
 ```
 
 ---
@@ -182,26 +163,53 @@ Open http://localhost:8000
 
 ```
 voice-ai-agent/
-├── main.py                 # FastAPI server + WebSocket handlers
-├── pipeline.py             # Core conversation pipeline with interruption handling
-├── llm.py                  # GPT-4o engine with streaming
-├── tts.py                  # ElevenLabs TTS with emotional voice
-├── asr.py                  # Deepgram speech-to-text
-├── guardrails.py           # Safety guardrails
-├── dialogue.py             # Conversation state manager
-├── ticketing.py            # Zendesk integration
-├── notifications.py        # Twilio SMS
-├── analytics.py            # PostgreSQL + Redis logging
+├── main.py                 # FastAPI server + Agora integration
 ├── config.py               # Pydantic settings
-├── agora_integration.py    # Agora token generation
 ├── static/
 │   └── index.html          # 3D dashboard with voice interface
-├── tests/
-│   └── test_pipeline.py    # Unit tests
-├── Dockerfile              # Container build
 ├── requirements.txt        # Python dependencies
-└── .env                    # Environment variables
+├── Dockerfile              # Container build
+├── README.md               # This file
+└── .env                    # Environment variables (not committed)
 ```
+
+---
+
+## How Agora Is Used
+
+### Primary Platform: Agora Conversational AI Engine
+
+VoxAssist uses **Agora Conversational AI** as the primary voice platform, not just as an RTC layer. The entire STT → LLM → TTS pipeline is orchestrated by Agora's engine.
+
+### Integration Flow
+
+```python
+from agora_agent import Agent, Agora, Area, DeepgramSTT, OpenAI, ElevenLabsTTS
+
+# Create Agora client
+client = Agora(area=Area.US, app_id="...", app_certificate="...")
+
+# Build agent with vendors
+agent = Agent(client=client).with_stt(
+    DeepgramSTT(model="nova-3", language="multi")
+).with_llm(
+    OpenAI(model="gpt-4o-mini", system_messages=[...])
+).with_tts(
+    ElevenLabsTTS(key="...", voice_id="rachel")
+)
+
+# Start session
+session = agent.create_session(channel="...", agent_uid="1")
+session.start()
+```
+
+### Why Agora?
+
+1. **Single SDK** - Handles STT, LLM, TTS orchestration
+2. **Low latency** - <800ms end-to-end
+3. **Built-in interruption** - No custom code needed
+4. **Multilingual** - Native support for Hindi/English
+5. **Scalable** - Enterprise-grade infrastructure
 
 ---
 
@@ -211,12 +219,6 @@ voice-ai-agent/
 - Requires microphone permission in browser
 - Voice quality depends on network latency
 - Agora free tier has limited concurrent users
-
----
-
-## Team
-
-- **Divyanshi** - Developer
 
 ---
 
