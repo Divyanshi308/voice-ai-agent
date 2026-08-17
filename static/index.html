@@ -2720,7 +2720,8 @@
             // Check demo credentials first
             if (identifier === 'demo' && password === 'demo123') {
                 var demoUser = {
-                    user_id: 'demo_user_' + Date.now(),
+                    id: 0,
+                    user_id: 0,
                     username: 'demo',
                     email: 'demo@kataru.ai',
                     full_name: 'Demo User',
@@ -2880,7 +2881,8 @@
             showToast('Connecting to ' + provider.charAt(0).toUpperCase() + provider.slice(1) + '...', 'info');
 
             var oauthUser = {
-                user_id: provider + '_' + Date.now(),
+                id: 0,
+                user_id: 0,
                 username: provider + '_user',
                 email: 'user@' + provider + '.com',
                 full_name: provider.charAt(0).toUpperCase() + provider.slice(1) + ' User',
@@ -2936,6 +2938,7 @@
            ============================================ */
         function loginUser(user) {
             currentUser = user;
+            currentUser.user_id = user.id || user.user_id || 'demo_user_' + Date.now();
 
             document.getElementById('authPage').classList.add('hidden');
             document.getElementById('appPage').classList.remove('hidden');

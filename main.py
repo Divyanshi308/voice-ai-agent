@@ -77,6 +77,10 @@ class ChatRequest(BaseModel):
     user_id: int = 0
     session_id: str = ""
 
+    @property
+    def uid(self) -> int:
+        return int(self.user_id) if self.user_id else 0
+
 
 class ContextRequest(BaseModel):
     key: str
@@ -333,7 +337,10 @@ class CustomerServiceAgent:
             return "english"
 
     def get_response(self, text: str, language: str = "auto") -> tuple[str, str]:
+        import re
         text_lower = text.lower().strip()
+
+        words = set(re.findall(r'\w+', text_lower))
 
         if language == "auto":
             detected_lang = self.detect_language(text)
@@ -347,15 +354,17 @@ class CustomerServiceAgent:
         else:
             responses = self.english_responses
 
-        if any(w in text_lower for w in ["emergency", "bachao", "help", "ambulance", "112", "911", "urgent"]):
+        emergency_words = {"emergency", "bachao", "ambulance", "112", "911", "urgent"}
+        if words & emergency_words or "help me" in text_lower or "madad karo" in text_lower:
             if detected_lang == "hindi":
                 return ("emergency", "Yeh emergency lag raha hai! Please turant 112 par call karein. "
-                        "Main yahan hoon, aapki help karungi. Please shaant rahein.")
+                        "Main yahan hoon. Please shaant rahein.")
             else:
                 return ("emergency", "This sounds like an emergency! Please call 112 immediately. "
                         "I am here with you. Please stay calm.")
 
-        if any(w in text_lower for w in ["medical", "doctor", "hospital", "sick", "ill", "bimar", "dawaai", "medicine"]):
+        medical_words = {"doctor", "hospital", "sick", "illness", "bimar", "dawaai", "medicine", "medication", "fever", "pain"}
+        if words & medical_words:
             if detected_lang == "hindi":
                 return ("medical", "Main medical advice nahi de sakti. Please apne doctor se baat karein "
                         "ya 112 par call karein agar emergency hai.")
@@ -363,101 +372,129 @@ class CustomerServiceAgent:
                 return ("medical", "I cannot provide medical advice. Please consult your doctor "
                         "or call 112 if this is an emergency.")
 
-        if any(w in text_lower for w in ["legal", "court", "lawyer", "sue", "case"]):
+        legal_words = {"legal", "court", "lawyer", "sue", "lawsuit"}
+        if words & legal_words:
             if detected_lang == "hindi":
                 return ("legal", "Main legal advice nahi de sakti. Please ek lawyer se baat karein.")
             else:
                 return ("legal", "I cannot provide legal advice. Please consult with a lawyer.")
 
-        if any(w in text_lower for w in ["finance", "money", "bank", "loan", "invest"]):
+        financial_words = {"finance", "invest", "loan", "interest", "trading", "stock"}
+        if words & financial_words:
             if detected_lang == "hindi":
                 return ("financial", "Main financial advice nahi de sakti. Please ek financial advisor se baat karein.")
             else:
                 return ("financial", "I cannot provide financial advice. Please consult with a financial advisor.")
 
-        if any(w in text_lower for w in ["hello", "hi", "namaste", "hey"]):
+        greeting_words = {"hello", "hi", "hey", "namaste", "namaskar", "good morning", "good evening"}
+        if words & greeting_words or text_lower in ["hello", "hi", "hey", "namaste"]:
             if detected_lang == "hindi":
                 return ("greeting", random.choice(responses["greeting"]))
             else:
                 return ("greeting", random.choice(responses["greeting"]))
 
-        if any(w in text_lower for w in ["name", "naam", "who are you", "kaun ho"]):
+        name_words = {"naam", "who are you", "kaun ho", "tumhara naam"}
+        if words & name_words or "my name" in text_lower or "i am" in text_lower or "mera naam" in text_lower:
+            if "my name is" in text_lower or "mera naam" in text_lower or "i am" in text_lower:
+                parts = text_lower.replace("my name is", "").replace("mera naam hai", "").replace("mera naam", "").replace("i am", "").strip()
+                name = parts.title() if parts else ""
+                if name:
+                    if detected_lang == "hindi":
+                        return ("greeting", f"Namaste {name}! Aapki kya madad kar sakti hoon?")
+                    else:
+                        return ("greeting", f"Hello {name}! How can I help you today?")
             if detected_lang == "hindi":
                 return ("ask_name", random.choice(responses["ask_name"]))
             else:
                 return ("ask_name", random.choice(responses["ask_name"]))
 
-        if any(w in text_lower for w in ["problem", "issue", "help", "madad", "pareshaani", "complaint"]):
+        issue_words = {"problem", "issue", "complaint", "pareshaani", "grievance", "help"}
+        if words & issue_words:
             if detected_lang == "hindi":
                 return ("ask_issue", random.choice(responses["ask_issue"]))
             else:
                 return ("ask_issue", random.choice(responses["ask_issue"]))
 
-        if any(w in text_lower for w in ["thank", "dhanyavaad", "shukriya"]):
+        thanks_words = {"thank", "dhanyavaad", "shukriya", "thanks"}
+        if words & thanks_words:
             if detected_lang == "hindi":
                 return ("farewell", random.choice(responses["farewell"]))
             else:
                 return ("farewell", random.choice(responses["farewell"]))
 
-        if any(w in text_lower for w in ["bye", "alvida", "goodbye"]):
+        bye_words = {"bye", "alvida", "goodbye", "goodnight"}
+        if words & bye_words:
             if detected_lang == "hindi":
                 return ("farewell", "Alvida! Apna khayal rakhiye. Zaroorat ho toh wapas aaiye.")
             else:
                 return ("farewell", "Goodbye! Take care. Come back if you need help.")
 
-        if any(w in text_lower for w in ["bill", "bill payment", "biil"]):
+        if "bill" in words or "payment" in words:
             if detected_lang == "hindi":
                 return ("billing", "Aapka bill payment karna hai? Bataiye kis cheez ka bill hai aur kitna amount hai.")
             else:
                 return ("billing", "You want to pay a bill? Please tell me what the bill is for and the amount.")
 
-        if any(w in text_lower for w in ["account", "account number", "account details"]):
+        if "account" in words:
             if detected_lang == "hindi":
                 return ("account", "Aapka account number kya hai? Please bataiye.")
             else:
                 return ("account", "What is your account number? Please provide it.")
 
-        if any(w in text_lower for w in ["address", "pata"]):
+        if "address" in words or "pata" in words:
             if detected_lang == "hindi":
                 return ("address", "Aapka address kya hai? Please pura address bataiye.")
             else:
                 return ("address", "What is your address? Please provide your full address.")
 
-        if any(w in text_lower for w in ["phone", "number", "contact"]):
+        if "phone" in words or "number" in words or "contact" in words:
             if detected_lang == "hindi":
                 return ("contact", "Aapka phone number kya hai? Please bataiye.")
             else:
                 return ("contact", "What is your phone number? Please provide it.")
 
-        if any(w in text_lower for w in ["date", "when", "kab"]):
+        if "date" in words or "kab" in words or "when" in words:
             if detected_lang == "hindi":
                 return ("date", "Kab hua yeh? Date bataiye.")
             else:
                 return ("date", "When did this happen? Please provide the date.")
 
-        if any(w in text_lower for w in ["yes", "haan", "ji", "correct", "sahi", "theek"]):
+        if words & {"yes", "haan", "ji", "correct", "sahi", "theek"}:
             if detected_lang == "hindi":
                 return ("confirm", "Bahut achha! Koi aur cheez hai jo mujhe batani chahiye?")
             else:
                 return ("confirm", "Great! Is there anything else you need to tell me?")
 
-        if any(w in text_lower for w in ["no", "nahi", "nahin", "bas"]):
+        if words & {"no", "nahi", "nahin", "bas"}:
             if detected_lang == "hindi":
                 return ("resolution", "Theek hai! Main aapki help kar deti hoon. Ek minute please.")
             else:
                 return ("resolution", "Alright! Let me help you with that. One moment please.")
 
-        if any(w in text_lower for w in ["transfer", "human", "agent", "person"]):
+        escalate_words = {"transfer", "human", "agent", "person", "representative", "specialist"}
+        if words & escalate_words:
             if detected_lang == "hindi":
                 return ("escalation", random.choice(responses["escalation"]))
             else:
                 return ("escalation", random.choice(responses["escalation"]))
 
-        if any(w in text_lower for w in ["sorry", "maaf", "pata nahi"]):
+        if "sorry" in words or "maaf" in words or "pata nahi" in text_lower:
             if detected_lang == "hindi":
                 return ("ask_details", "Koi baat nahi. Please aur detail mein bataiye, main samajhne ki koshish karungi.")
             else:
                 return ("ask_details", "No problem. Please provide more details, I will try to understand.")
+
+        if "remember" in words or "yaad" in words:
+            if detected_lang == "hindi":
+                return ("general", "Main aapki baatein yaad rakh sakti hoon. Bataiye kya yaad rakhna hai?")
+            else:
+                return ("general", "I can remember things for you. What would you like me to remember?")
+
+        if "lonely" in words or "akela" in words or "bored" in words:
+            if detected_lang == "hindi":
+                return ("general", "Main hoon na aapke saath! Baat karte hain. Aapka din kaisa guzra?")
+            else:
+                return ("general", "I am here with you! Let us talk. How was your day?")
 
         if len(text.split()) < 3:
             if detected_lang == "hindi":
@@ -480,10 +517,19 @@ async def test_endpoint(req: ChatRequest):
     session_id = req.session_id or call_id
     text = req.text.strip()
 
+    user_id = 0
+    try:
+        user_id = int(req.user_id) if req.user_id else 0
+    except (ValueError, TypeError):
+        user_id = 0
+
     user_context = {}
-    if req.user_id:
-        user_context = get_user_context(req.user_id)
-        save_chat_message(req.user_id, session_id, "user", req.text)
+    if user_id > 0:
+        try:
+            user_context = get_user_context(user_id)
+            save_chat_message(user_id, session_id, "user", req.text)
+        except Exception:
+            pass
 
     user_name = user_context.get("name", "")
 
@@ -496,8 +542,11 @@ async def test_endpoint(req: ChatRequest):
             elif "thank" in text.lower() or "bye" in text.lower():
                 response = f"Thank you {user_name}! Apna khayal rakhiye."
 
-        if req.user_id:
-            save_chat_message(req.user_id, session_id, "ai", response)
+        if user_id > 0:
+            try:
+                save_chat_message(user_id, session_id, "ai", response)
+            except Exception:
+                pass
 
         return {
             "input": req.text,
@@ -535,10 +584,14 @@ async def test_endpoint(req: ChatRequest):
             system_prompt += f"\n\nThe user's name is {user_name}. Use it in conversation."
 
         messages = [{"role": "system", "content": system_prompt}]
-        history = get_chat_history(req.user_id, session_id, limit=10) if req.user_id else []
-        for msg in reversed(history):
-            role = "user" if msg["message_role"] == "user" else "assistant"
-            messages.append({"role": role, "content": msg["message_text"]})
+        if user_id > 0:
+            try:
+                history = get_chat_history(user_id, session_id, limit=10)
+                for msg in reversed(history):
+                    role = "user" if msg["message_role"] == "user" else "assistant"
+                    messages.append({"role": role, "content": msg["message_text"]})
+            except Exception:
+                pass
         messages.append({"role": "user", "content": req.text})
 
         response_obj = await client.chat.completions.create(
@@ -550,8 +603,11 @@ async def test_endpoint(req: ChatRequest):
 
         response = response_obj.choices[0].message.content
 
-        if req.user_id:
-            save_chat_message(req.user_id, session_id, "ai", response)
+        if user_id > 0:
+            try:
+                save_chat_message(user_id, session_id, "ai", response)
+            except Exception:
+                pass
 
         return {
             "input": req.text,
