@@ -712,6 +712,8 @@ async def test_endpoint(req: ChatRequest):
 
         llm_messages.append({"role": "user", "content": req.text})
 
+        last_error = ""
+
         if config.groq_api_key:
             try:
                 from openai import AsyncOpenAI
@@ -747,6 +749,7 @@ async def test_endpoint(req: ChatRequest):
 
             except Exception as e:
                 logger.error("groq_error", error=str(e))
+                last_error = str(e)
 
         if config.openai_api_key and not config.openai_api_key.startswith("dummy"):
             try:
@@ -796,6 +799,7 @@ async def test_endpoint(req: ChatRequest):
             "call_id": call_id,
             "session_id": session_id,
             "mode": "smart_agent",
+            "last_error": last_error,
         }
 
     except Exception as e:
@@ -1056,12 +1060,30 @@ async def research_endpoint(req: ChatRequest):
 
 @app.get("/debug/config")
 async def debug_config():
-    return {
+    result = {
         "groq_key_set": bool(config.groq_api_key),
         "groq_key_prefix": config.groq_api_key[:10] if config.groq_api_key else "NONE",
         "groq_model": config.groq_model,
         "openai_key_set": bool(config.openai_api_key),
     }
+    if config.groq_api_key:
+        try:
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(
+                api_key=config.groq_api_key,
+                base_url="https://api.groq.com/openai/v1",
+            )
+            r = await client.chat.completions.create(
+                model=config.groq_model,
+                messages=[{"role": "user", "content": "say hi"}],
+                max_tokens=10,
+            )
+            result["groq_test"] = "OK"
+            result["groq_response"] = r.choices[0].message.content
+        except Exception as e:
+            result["groq_test"] = "FAILED"
+            result["groq_error"] = str(e)
+    return result
 
 
 if __name__ == "__main__":
