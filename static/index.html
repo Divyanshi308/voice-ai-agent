@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Kataru (語る) - Voice AI Agent</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -1822,47 +1822,452 @@
         }
 
         /* ============================================
+           MOBILE MENU BUTTON (hidden on desktop)
+           ============================================ */
+        .mobile-menu-btn {
+            display: none;
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            min-height: 44px;
+            border-radius: var(--radius-md);
+            background: rgba(128, 128, 128, 0.08);
+            border: 1px solid var(--border);
+            color: var(--text);
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 5px;
+            padding: 10px;
+            flex-shrink: 0;
+            transition: all var(--transition-fast);
+            z-index: 200;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .mobile-menu-btn span {
+            display: block;
+            width: 20px;
+            height: 2px;
+            background: var(--text);
+            border-radius: 2px;
+            transition: all var(--transition-normal);
+        }
+
+        .mobile-menu-btn.active span:nth-child(1) {
+            transform: translateY(7px) rotate(45deg);
+        }
+
+        .mobile-menu-btn.active span:nth-child(2) {
+            opacity: 0;
+            transform: scaleX(0);
+        }
+
+        .mobile-menu-btn.active span:nth-child(3) {
+            transform: translateY(-7px) rotate(-45deg);
+        }
+
+        .mobile-menu-btn:active {
+            transform: scale(0.92);
+        }
+
+        /* ============================================
+           SIDEBAR OVERLAY (mobile background dim)
+           ============================================ */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 90;
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            opacity: 0;
+            transition: opacity var(--transition-normal);
+        }
+
+        .sidebar-overlay.visible {
+            display: block;
+            opacity: 1;
+        }
+
+        /* ============================================
            RESPONSIVE DESIGN
            ============================================ */
+
+        /* Mobile: 768px and below */
         @media (max-width: 768px) {
+            /* --- Safe areas for notch --- */
+            body {
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+
+            /* --- Mobile menu button --- */
+            .mobile-menu-btn {
+                display: flex;
+            }
+
+            /* --- Header --- */
+            .app-header {
+                height: 56px;
+                padding: 0 16px;
+            }
+
+            .header-title {
+                font-size: 15px;
+                gap: 6px;
+            }
+
+            .header-title svg {
+                width: 16px;
+                height: 16px;
+            }
+
+            .theme-toggle {
+                width: 36px;
+                height: 36px;
+                font-size: 16px;
+            }
+
+            .header-avatar {
+                width: 34px;
+                height: 34px;
+                font-size: 12px;
+            }
+
+            /* --- Sidebar: hidden by default, overlay on open --- */
             .sidebar {
-                width: var(--sidebar-collapsed);
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 0;
+                min-width: 0;
+                border-right: none;
+                z-index: 100;
+                transform: translateX(-100%);
+                transition: transform var(--transition-normal), width var(--transition-normal);
+            }
+
+            .sidebar.mobile-open {
+                width: 260px;
+                min-width: 260px;
+                transform: translateX(0);
+                border-right: 1px solid var(--border);
             }
 
             .sidebar .sidebar-brand,
             .sidebar .nav-label,
             .sidebar .user-details,
             .sidebar .nav-item span {
+                display: block;
+                opacity: 1;
+                width: auto;
+                overflow: visible;
+            }
+
+            .sidebar-toggle {
                 display: none;
             }
 
-            .main-content {
-                margin-left: var(--sidebar-collapsed);
+            .sidebar-header {
+                min-height: 56px;
             }
 
-            .sidebar.collapsed {
-                width: 0;
-                border: none;
+            /* --- Main content: full width --- */
+            .main-content {
+                margin-left: 0;
             }
 
             .sidebar.collapsed ~ .main-content {
                 margin-left: 0;
             }
 
+            /* --- Page content --- */
             .page-content {
                 padding: 16px;
             }
 
+            /* --- Chat page --- */
+            .chat-page {
+                height: calc(100vh - 56px);
+                max-height: calc(100vh - 56px);
+            }
+
+            .chat-header {
+                padding: 10px 16px;
+            }
+
+            .chat-header-info h2 {
+                font-size: 14px;
+            }
+
+            .chat-avatar {
+                width: 36px;
+                height: 36px;
+                font-size: 16px;
+            }
+
             .message {
                 max-width: 90%;
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+
+            .chat-messages {
+                padding: 12px 16px;
             }
 
             .quick-replies {
                 padding: 8px 16px;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+
+            .quick-replies::-webkit-scrollbar {
+                display: none;
+            }
+
+            .quick-reply {
+                padding: 8px 14px;
+                font-size: 12px;
+                flex-shrink: 0;
             }
 
             .chat-input-area {
+                padding: 10px 16px;
+            }
+
+            .chat-input {
+                padding: 12px 14px;
+                font-size: 16px;
+                min-height: 48px;
+            }
+
+            .chat-send {
+                width: 48px;
+                height: 48px;
+                min-width: 48px;
+                min-height: 48px;
+            }
+
+            .welcome-message {
+                padding: 24px 16px;
+            }
+
+            .welcome-message .welcome-icon {
+                font-size: 36px;
+            }
+
+            .welcome-message h3 {
+                font-size: 18px;
+            }
+
+            .welcome-message p {
+                font-size: 13px;
+            }
+
+            /* --- Voice UI --- */
+            .voice-mode-area {
+                padding: 24px 16px;
+            }
+
+            .mic-btn {
+                width: 80px;
+                height: 80px;
+            }
+
+            .mic-btn svg {
+                width: 28px;
+                height: 28px;
+            }
+
+            .audio-visualizer {
+                height: 36px;
+                gap: 3px;
+            }
+
+            .audio-bar {
+                width: 3px;
+            }
+
+            .voice-transcript {
+                max-width: 100%;
+                padding: 10px 16px;
+            }
+
+            .voice-transcript-text {
+                font-size: 13px;
+            }
+
+            .chat-voice-area {
                 padding: 12px 16px;
+            }
+
+            .voice-toggle-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 16px;
+            }
+
+            .voice-mode-badge {
+                font-size: 10px;
+                padding: 3px 8px;
+            }
+
+            .mic-label {
+                font-size: 12px;
+            }
+
+            /* --- Settings --- */
+            .settings-page {
+                max-width: 100%;
+            }
+
+            .settings-section {
+                padding: 18px;
+            }
+
+            .page-title {
+                font-size: 22px;
+                margin-bottom: 18px;
+            }
+
+            .setting-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+                padding: 12px 0;
+            }
+
+            .setting-info {
+                margin-right: 0;
+            }
+
+            .range-slider {
+                max-width: 100%;
+            }
+
+            .select-dropdown {
+                width: 100%;
+                min-height: 44px;
+            }
+
+            /* --- Profile --- */
+            .profile-page {
+                max-width: 100%;
+            }
+
+            .profile-card {
+                padding: 28px 20px;
+            }
+
+            .profile-avatar-lg {
+                width: 80px;
+                height: 80px;
+                font-size: 28px;
+            }
+
+            .profile-name {
+                font-size: 20px;
+            }
+
+            .profile-stats {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+
+            .stat-value {
+                font-size: 22px;
+            }
+
+            /* --- Past Chats --- */
+            .chats-page {
+                max-width: 100%;
+            }
+
+            .chat-list-item {
+                padding: 12px 14px;
+            }
+
+            .chat-list-meta {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+
+            .chat-list-icon {
+                width: 38px;
+                height: 38px;
+                min-width: 38px;
+                font-size: 16px;
+            }
+
+            .chat-list-preview {
+                font-size: 13px;
+            }
+
+            /* --- Toast --- */
+            .toast-container {
+                top: 68px;
+                right: 12px;
+                left: 12px;
+            }
+
+            .toast {
+                max-width: 100%;
+                padding: 12px 16px;
+                font-size: 13px;
+            }
+
+            /* --- Auth --- */
+            .auth-page {
+                padding: 16px;
+                padding-top: calc(16px + env(safe-area-inset-top));
+            }
+
+            .auth-card {
+                padding: 24px 20px;
+            }
+
+            .auth-tabs {
+                margin-bottom: 22px;
+            }
+
+            .auth-tab {
+                padding: 12px;
+                font-size: 14px;
+                min-height: 44px;
+            }
+
+            .auth-form {
+                gap: 14px;
+            }
+
+            .form-input {
+                padding: 14px 16px;
+                font-size: 16px;
+                min-height: 48px;
+            }
+
+            .btn {
+                min-height: 48px;
+                padding: 14px 20px;
+                font-size: 15px;
+            }
+
+            .btn-social {
+                min-height: 48px;
+                padding: 14px;
+            }
+
+            .social-buttons {
+                flex-direction: column;
             }
 
             .theme-cards {
@@ -1874,30 +2279,296 @@
                 gap: 8px;
             }
 
-            .social-buttons {
-                flex-direction: column;
-            }
-
-            .auth-card {
-                padding: 28px;
+            /* --- Three.js canvas --- */
+            #three-canvas {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 0;
+                pointer-events: none;
             }
         }
 
+        /* Small phones: 480px and below */
         @media (max-width: 480px) {
+            .auth-logo-icon {
+                font-size: 36px;
+            }
+
             .auth-logo h1 {
-                font-size: 32px;
+                font-size: 30px;
+            }
+
+            .auth-logo .japanese {
+                font-size: 14px;
+                letter-spacing: 3px;
+            }
+
+            .auth-logo .tagline {
+                font-size: 12px;
             }
 
             .auth-card {
-                padding: 24px 20px;
+                padding: 20px 16px;
+                border-radius: var(--radius-lg);
+            }
+
+            .auth-container {
+                max-width: 100%;
             }
 
             .header-title {
-                font-size: 14px;
+                font-size: 13px;
+            }
+
+            .header-title svg {
+                display: none;
             }
 
             .chat-messages {
+                padding: 10px 12px;
+            }
+
+            .message {
+                max-width: 92%;
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            .welcome-message h3 {
+                font-size: 16px;
+            }
+
+            .welcome-message p {
+                font-size: 12px;
+            }
+
+            .quick-replies {
+                gap: 6px;
+                padding: 6px 12px;
+            }
+
+            .quick-reply {
+                padding: 6px 12px;
+                font-size: 11px;
+            }
+
+            .mic-btn {
+                width: 72px;
+                height: 72px;
+            }
+
+            .profile-card {
+                padding: 24px 16px;
+            }
+
+            .profile-avatar-lg {
+                width: 70px;
+                height: 70px;
+                font-size: 24px;
+            }
+
+            .profile-name {
+                font-size: 18px;
+            }
+
+            .profile-email-text {
+                font-size: 13px;
+            }
+
+            .page-title {
+                font-size: 20px;
+            }
+
+            .settings-section {
+                padding: 16px;
+            }
+
+            .settings-section h3 {
+                font-size: 14px;
+            }
+
+            .chat-list-item {
+                padding: 10px 12px;
+                gap: 10px;
+            }
+
+            .chat-list-icon {
+                width: 34px;
+                height: 34px;
+                min-width: 34px;
+                font-size: 14px;
+            }
+
+            .chat-list-preview {
+                font-size: 12px;
+            }
+
+            .chat-list-meta {
+                font-size: 11px;
+            }
+
+            .empty-state {
+                padding: 48px 16px;
+            }
+
+            .empty-icon {
+                font-size: 56px;
+            }
+
+            .empty-state h3 {
+                font-size: 17px;
+            }
+
+            .empty-state p {
+                font-size: 13px;
+            }
+        }
+
+        /* Landscape phone */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .chat-page {
+                height: calc(100vh - 50px);
+                max-height: calc(100vh - 50px);
+            }
+
+            .voice-mode-area {
                 padding: 12px 16px;
+                gap: 10px;
+            }
+
+            .mic-btn {
+                width: 64px;
+                height: 64px;
+            }
+
+            .mic-btn svg {
+                width: 24px;
+                height: 24px;
+            }
+
+            .welcome-message {
+                padding: 16px;
+            }
+
+            .welcome-message .welcome-icon {
+                font-size: 28px;
+            }
+
+            .welcome-message h3 {
+                margin-bottom: 4px;
+            }
+        }
+
+        /* Touch devices */
+        @media (hover: none) and (pointer: coarse) {
+            /* Remove hover-only effects on touch */
+            .btn:hover::after {
+                opacity: 0;
+            }
+
+            .btn-primary:hover {
+                transform: none;
+            }
+
+            .btn-secondary:hover {
+                transform: none;
+            }
+
+            .btn-social:hover {
+                transform: none;
+                box-shadow: none;
+            }
+
+            .quick-reply:hover {
+                transform: none;
+                box-shadow: none;
+            }
+
+            .chat-send:hover {
+                transform: none;
+                box-shadow: none;
+            }
+
+            .chat-send:hover svg {
+                transform: none;
+            }
+
+            .theme-toggle:hover {
+                transform: none;
+            }
+
+            .header-avatar:hover {
+                transform: none;
+                box-shadow: none;
+            }
+
+            .chat-list-item:hover {
+                transform: none;
+                box-shadow: none;
+            }
+
+            .chat-list-item:hover .chat-delete {
+                opacity: 1;
+            }
+
+            .auth-card:hover {
+                transform: none;
+            }
+
+            .nav-item:hover {
+                background: none;
+            }
+
+            .nav-item.active:hover {
+                background: var(--primary-dim);
+            }
+
+            .user-info:hover {
+                background: none;
+            }
+
+            .voice-toggle-btn:hover {
+                background: rgba(128, 128, 128, 0.08);
+                color: var(--text-dim);
+            }
+
+            .mic-btn:hover {
+                transform: none;
+                box-shadow: 0 4px 24px var(--primary-dim);
+            }
+
+            .avatar-edit-overlay:hover {
+                transform: none;
+            }
+
+            /* Ensure all tap targets are at least 44x44 */
+            .nav-item {
+                min-height: 44px;
+                padding: 12px 14px;
+            }
+
+            .chat-delete {
+                width: 44px;
+                height: 44px;
+            }
+
+            .toggle-switch {
+                min-width: 48px;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+            }
+
+            .range-slider::-webkit-slider-thumb {
+                width: 24px;
+                height: 24px;
+            }
+
+            .select-dropdown {
+                min-height: 44px;
             }
         }
 
@@ -2329,9 +3000,17 @@
             </div>
         </aside>
 
+        <!-- Sidebar overlay for mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMobileSidebar()"></div>
+
         <!-- Main Content -->
         <main class="main-content">
             <header class="app-header">
+                <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Toggle menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
                 <div class="header-title" id="headerTitle">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -3284,6 +3963,17 @@
            NAVIGATION
            ============================================ */
         window.navigateTo = function(page) {
+            // Close mobile sidebar if open
+            var sidebar = document.getElementById('sidebar');
+            var overlay = document.getElementById('sidebarOverlay');
+            var menuBtn = document.getElementById('mobileMenuBtn');
+            if (sidebar.classList.contains('mobile-open')) {
+                sidebar.classList.remove('mobile-open');
+                overlay.classList.remove('visible');
+                menuBtn.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
             // Update nav active state
             var navItems = document.querySelectorAll('.nav-item');
             navItems.forEach(function(item) {
@@ -3332,6 +4022,28 @@
            ============================================ */
         window.toggleSidebar = function() {
             document.getElementById('sidebar').classList.toggle('collapsed');
+        };
+
+        /* ============================================
+           MOBILE SIDEBAR TOGGLE
+           ============================================ */
+        window.toggleMobileSidebar = function() {
+            var sidebar = document.getElementById('sidebar');
+            var overlay = document.getElementById('sidebarOverlay');
+            var menuBtn = document.getElementById('mobileMenuBtn');
+            var isOpen = sidebar.classList.contains('mobile-open');
+
+            if (isOpen) {
+                sidebar.classList.remove('mobile-open');
+                overlay.classList.remove('visible');
+                menuBtn.classList.remove('active');
+                document.body.style.overflow = '';
+            } else {
+                sidebar.classList.add('mobile-open');
+                overlay.classList.add('visible');
+                menuBtn.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
         };
 
         /* ============================================
