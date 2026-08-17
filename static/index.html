@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VoxAssist - Elderly Care Voice AI Agent</title>
+    <title>Kataru (語る) - Elderly Care Voice AI Agent</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -544,7 +544,7 @@
             <div class="logo-group">
                 <div class="logo-icon">&#9834;</div>
                 <div>
-                    <div class="logo-text">VoxAssist</div>
+                    <div class="logo-text">Kataru (語る)</div>
                     <div class="logo-sub">Powered by AGORA | EchoSphere 2026</div>
                 </div>
             </div>
@@ -614,7 +614,7 @@
                 <div class="panel-title">Text Chat</div>
                 <div class="chat-messages" id="chatMessages">
                     <div class="chat-msg ai">
-                        <div class="chat-bubble">Hello! I'm VoxAssist, your elderly care companion. How can I help you today?</div>
+                        <div class="chat-bubble">Hello! I'm Kataru, your elderly care companion. How can I help you today?</div>
                         <div class="chat-mode-tag">system</div>
                     </div>
                 </div>
@@ -697,7 +697,7 @@
         </section>
 
         <footer>
-            <p>VoxAssist &copy; 2026 &mdash; Built for EchoSphere Hackathon. Powered by <a href="https://www.agora.io/" target="_blank">Agora</a>, OpenAI, and ElevenLabs.</p>
+            <p>Kataru (語る) &copy; 2026 &mdash; Built for EchoSphere Hackathon. Powered by <a href="https://www.agora.io/" target="_blank">Agora</a>, OpenAI, and ElevenLabs.</p>
         </footer>
     </div>
 
@@ -815,7 +815,7 @@
 
         function appendTranscript(role, text) {
             var cls = role === 'user' ? 'tx-user' : role === 'ai' ? 'tx-ai' : 'tx-system';
-            var label = role === 'user' ? 'You' : role === 'ai' ? 'VoxAssist' : 'System';
+            var label = role === 'user' ? 'You' : role === 'ai' ? 'Kataru' : 'System';
             var div = document.createElement('div');
             div.className = cls;
             div.innerHTML = '<strong>' + label + ':</strong> ' + escapeHtml(text);
@@ -916,8 +916,8 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     channel_name: 'voxassist-' + Date.now(),
-                    greeting: 'Hello! I am VoxAssist, your elderly care companion. How can I help you today?',
-                    system_prompt: 'You are VoxAssist, a caring voice assistant for elderly people. You speak clearly, warmly, and concisely. Support Hindi, English, and Hinglish.',
+                    greeting: 'Hello! I am Kataru, your elderly care companion. How can I help you today?',
+                    system_prompt: 'You are Kataru, a caring voice assistant for elderly people. You speak clearly, warmly, and concisely. Support Hindi, English, and Hinglish.',
                     llm_model: 'gpt-4o',
                     tts_vendor: 'elevenlabs'
                 })

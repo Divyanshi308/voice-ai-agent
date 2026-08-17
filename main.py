@@ -65,7 +65,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="VoxAssist - Elderly Care Voice AI Agent",
+    title="Kataru (語る) - Elderly Care Voice AI Agent",
     description="Multilingual voice AI for elderly care powered by Agora Conversational AI",
     lifespan=lifespan,
 )
@@ -139,7 +139,7 @@ async def start_agent(req: AgentRequest):
         )
 
         system_prompt = req.system_prompt or (
-            "You are VoxAssist, a caring multilingual voice assistant for elderly care. "
+            "You are Kataru, a caring multilingual voice assistant for elderly care. "
             "You help with medicine reminders, daily tasks, emergency calls, and companionship. "
             "Speak slowly and clearly. Use simple words. "
             "If someone says they need emergency help, immediately tell them to call 112 or 911. "
@@ -148,7 +148,7 @@ async def start_agent(req: AgentRequest):
         )
 
         greeting = req.greeting or (
-            "Namaste! I am VoxAssist, your voice companion. "
+            "Namaste! I am Kataru, your voice companion. "
             "How can I help you today? "
             "You can ask me about medicines, daily tasks, or just chat."
         )
@@ -298,7 +298,7 @@ async def test_endpoint(req: TestRequest):
         client = AsyncOpenAI(api_key=config.openai_api_key)
 
         system_prompt = (
-            "You are VoxAssist, a caring multilingual voice assistant for elderly care. "
+            "You are Kataru, a caring multilingual voice assistant for elderly care. "
             "You help with medicine reminders, daily tasks, emergency calls, and companionship. "
             "Speak slowly and clearly. Use simple words. Keep responses under 30 words."
         )

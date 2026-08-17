@@ -1,6 +1,8 @@
-# VoxAssist
+# Kataru (語る)
 
 **AI That Speaks, Listens, and Cares**
+
+*語る means "to speak" or "to tell a story" in Japanese*
 
 Built for the [EchoSphere: Agora Conversational AI Hackathon 2026](https://unstop.com/hackathons/echosphere-agora-conversational-ai-hackathon-knotic-1723695)
 
@@ -18,7 +20,7 @@ Existing solutions are either expensive human caregivers or basic reminder apps 
 
 ## Solution
 
-VoxAssist is a multilingual voice AI agent that:
+Kataru is a multilingual voice AI agent that:
 - **Speaks naturally** in Hindi, English, or Hinglish
 - **Remembers** your medications, appointments, and preferences
 - **Detects emergencies** and provides immediate guidance
@@ -133,11 +135,11 @@ Open http://localhost:8000
 
 ## Demo
 
-**Live Demo:** https://voice-ai-agent.onrender.com
+**Live Demo:** https://kataru-voice.onrender.com
 
 ### What to Try
 
-1. **Click the microphone** → Start a voice conversation
+1. **Click "Start Voice Session"** → Start a voice conversation
 2. **Say "Namaste"** → AI responds in Hindi
 3. **Say "I need my medicine"** → AI helps with medicine reminder
 4. **Interrupt the AI** → It stops and listens (barge-in)
@@ -179,7 +181,7 @@ voice-ai-agent/
 
 ### Primary Platform: Agora Conversational AI Engine
 
-VoxAssist uses **Agora Conversational AI** as the primary voice platform, not just as an RTC layer. The entire STT → LLM → TTS pipeline is orchestrated by Agora's engine.
+Kataru uses **Agora Conversational AI** as the primary voice platform, not just as an RTC layer. The entire STT → LLM → TTS pipeline is orchestrated by Agora's engine.
 
 ### Integration Flow
 
