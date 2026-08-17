@@ -2,16 +2,17 @@ import asyncio
 import os
 import time
 import uuid
+import random
 from contextlib import asynccontextmanager
 from typing import Optional
 
 import structlog
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 from config import config
 from database import (
@@ -39,7 +40,6 @@ structlog.configure(
 logger = structlog.get_logger()
 
 active_sessions: dict[str, dict] = {}
-user_sessions: dict[str, int] = {}
 start_time = time.time()
 
 
@@ -88,15 +88,10 @@ async def lifespan(app: FastAPI):
     init_db()
     logger.info("kataru_started", port=config.port, host=config.host)
     yield
-    for session_id in list(active_sessions):
-        active_sessions.pop(session_id, None)
     logger.info("kataru_stopped")
 
 
-app = FastAPI(
-    title="Kataru - Elderly Care Voice AI",
-    lifespan=lifespan,
-)
+app = FastAPI(title="Kataru - Voice AI Agent", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -117,17 +112,12 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/health")
 async def health():
-    return {
-        "status": "running",
-        "uptime": round(time.time() - start_time, 2),
-    }
+    return {"status": "running", "uptime": round(time.time() - start_time, 2)}
 
 
 @app.get("/metrics")
 async def metrics():
-    return {
-        "active_sessions": len(active_sessions),
-    }
+    return {"active_sessions": len(active_sessions)}
 
 
 @app.post("/api/auth/signup")
@@ -138,33 +128,18 @@ async def signup(req: SignupRequest):
         return {"success": False, "error": "Password must be at least 6 characters"}
     if "@" not in req.email:
         return {"success": False, "error": "Invalid email address"}
-
-    result = create_user(
-        username=req.username,
-        email=req.email,
-        password=req.password,
-        full_name=req.full_name,
-    )
-    return result
+    return create_user(req.username, req.email, req.password, req.full_name)
 
 
 @app.post("/api/auth/login")
 async def login(req: LoginRequest):
-    result = authenticate_user(req.identifier, req.password)
-    return result
+    return authenticate_user(req.identifier, req.password)
 
 
 @app.post("/api/auth/oauth")
 async def oauth_login(req: OAuthRequest):
     username = req.email.split("@")[0]
-    result = authenticate_oauth(
-        username=username,
-        email=req.email,
-        full_name=req.full_name,
-        provider=req.provider,
-        provider_id=req.provider_id,
-    )
-    return result
+    return authenticate_oauth(username, req.email, req.full_name, req.provider, req.provider_id)
 
 
 @app.get("/api/user/{user_id}")
@@ -172,46 +147,34 @@ async def get_user_profile(user_id: int):
     user = get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    stats = get_user_stats(user_id)
-    return {"user": user, "stats": stats}
+    return {"user": user, "stats": get_user_stats(user_id)}
 
 
 @app.put("/api/user/{user_id}")
 async def update_user_profile(user_id: int, req: ProfileUpdateRequest):
-    success = update_user(
-        user_id,
-        full_name=req.full_name,
-        language=req.language,
-        voice_speed=req.voice_speed,
-        notifications_enabled=int(req.notifications_enabled),
-        sound_enabled=int(req.sound_enabled),
-        theme=req.theme,
-    )
-    return {"success": success}
+    return {"success": update_user(user_id, full_name=req.full_name, language=req.language,
+            voice_speed=req.voice_speed, notifications_enabled=int(req.notifications_enabled),
+            sound_enabled=int(req.sound_enabled), theme=req.theme)}
 
 
 @app.get("/api/user/{user_id}/chats")
 async def get_user_chats(user_id: int):
-    chats = get_chat_history(user_id)
-    return {"chats": chats}
+    return {"chats": get_chat_history(user_id)}
 
 
 @app.get("/api/user/{user_id}/chats/{session_id}")
 async def get_chat_session(user_id: int, session_id: str):
-    messages = get_chat_history(user_id, session_id)
-    return {"messages": messages}
+    return {"messages": get_chat_history(user_id, session_id)}
 
 
 @app.delete("/api/user/{user_id}/chats/{session_id}")
 async def delete_chat(user_id: int, session_id: str):
-    deleted = delete_chat_session(user_id, session_id)
-    return {"success": deleted}
+    return {"success": delete_chat_session(user_id, session_id)}
 
 
 @app.get("/api/user/{user_id}/context")
 async def get_context(user_id: int):
-    context = get_user_context(user_id)
-    return {"context": context}
+    return {"context": get_user_context(user_id)}
 
 
 @app.post("/api/user/{user_id}/context")
@@ -220,11 +183,302 @@ async def save_context(user_id: int, req: ContextRequest):
     return {"success": True}
 
 
+class CustomerServiceAgent:
+    def __init__(self):
+        self.conversation_stages = {
+            "greeting": 0,
+            "name_collection": 1,
+            "issue_identification": 2,
+            "details_collection": 3,
+            "confirmation": 4,
+            "resolution": 5,
+            "escalation": 6,
+        }
+
+        self.collected_info = {}
+
+        self.hindi_responses = {
+            "greeting": [
+                "Namaste! Main Kataru hoon, aapki voice assistant. Aapki kya madad kar sakti hoon?",
+                "Namaste! Main Kataru se baat kar rahi hoon. Bataiye, kya problem hai?",
+                "Namaste! Aapki seva mein haazir hoon. Kya madad chahiye?",
+            ],
+            "ask_name": [
+                "Aapka naam kya hai?",
+                "Mein aapko kaise bulaun? Aapka naam bataiye.",
+                "Pehle mujhe aapka naam bata dijiye.",
+            ],
+            "ask_issue": [
+                "Aapko kya problem hai? Dhire se bataiye.",
+                "Bataiye kya ho raha hai? Main sun rahi hoon.",
+                "Aapki kya pareshaani hai?",
+            ],
+            "ask_details": [
+                "Aur detail mein bataiye.",
+                "Kya aur kuch hai jo mujhe batana chahiye?",
+                "Theek hai, aur kya?",
+            ],
+            "confirm": [
+                "Toh main samjhi, aapki problem yeh hai: {summary}. Sahi hai?",
+                "Kya yeh sahi hai: {summary}?",
+                "Maine yeh samjha: {summary}. Correct hai?",
+            ],
+            "escalation": [
+                "Main aapko human agent se connect karti hoon. Ek minute please.",
+                "Aapki baat ke liye mujhe expert se baat karni padegi. Rukiye.",
+                "Main aapko specialist ke paas bhej rahi hoon.",
+            ],
+            "farewell": [
+                "Dhanyavaad! Kisi aur cheez ki zaroorat ho toh bataiye.",
+                "Theek hai, aur kuch ho toh zaroor bataiye.",
+                "Achha, apna khayal rakhiye!",
+            ],
+        }
+
+        self.english_responses = {
+            "greeting": [
+                "Hello! I am Kataru, your voice assistant. How can I help you today?",
+                "Hi there! I am Kataru. What can I do for you?",
+                "Welcome! I am here to help. What do you need?",
+            ],
+            "ask_name": [
+                "What is your name?",
+                "May I know your name?",
+                "Please tell me your name.",
+            ],
+            "ask_issue": [
+                "What problem are you facing? Please explain.",
+                "Tell me what is happening. I am listening.",
+                "What issue would you like help with?",
+            ],
+            "ask_details": [
+                "Can you provide more details?",
+                "Is there anything else I should know?",
+                "Please tell me more.",
+            ],
+            "confirm": [
+                "So I understand your issue is: {summary}. Is that correct?",
+                "Let me confirm: {summary}. Right?",
+                "I heard: {summary}. Is this accurate?",
+            ],
+            "escalation": [
+                "I will connect you with a human agent. One moment please.",
+                "Let me transfer you to a specialist who can help better.",
+                "I am connecting you with an expert now.",
+            ],
+            "farewell": [
+                "Thank you! Let me know if you need anything else.",
+                "Is there anything else I can help with?",
+                "Take care! I am here if you need me.",
+            ],
+        }
+
+        self.hinglish_responses = {
+            "greeting": [
+                "Namaste! Main Kataru hoon, aapki assistant. Kya help chahiye?",
+                "Hi! Main Kataru se baat kar rahi hoon. Batao kya problem hai?",
+                "Hello! Main yahan hoon aapki help ke liye. Bolo kya ho raha hai?",
+            ],
+            "ask_name": [
+                "Tumhara naam kya hai?",
+                "Naam bata do please.",
+                "Kaise bulaun tumhe?",
+            ],
+            "ask_issue": [
+                "Kya ho raha hai? Batao.",
+                "Problem kya hai? Dhire se bolo.",
+                "Batao kya issue hai.",
+            ],
+            "ask_details": [
+                "Aur batao.",
+                "Kya aur hai jo batana chahiye?",
+                "Theek hai, aur kuch?",
+            ],
+            "confirm": [
+                "Toh samjhi, problem yeh hai: {summary}. Sahi hai?",
+                "Yeh sahi hai: {summary}?",
+                "Maine samjha: {summary}. Correct?",
+            ],
+            "escalation": [
+                "Main human se connect karti hoon. Ek minute.",
+                "Ruko, specialist se baat karwati hoon.",
+                "Expert ke paas bhej rahi hoon.",
+            ],
+            "farewell": [
+                "Thanks! Aur kuch ho toh batao.",
+                "Theek hai, apna khayal rakhna.",
+                "Bye! Zaroorat pade toh batao.",
+            ],
+        }
+
+    def detect_language(self, text: str) -> str:
+        text_lower = text.lower()
+        hindi_words = ["namaste", "kya", "hai", "hain", "mera", "meri", "aap", "aapka", "bataiye",
+                       "bolo", "samjhi", "dhanyavaad", "madad", "problem", "pareshaani", "dawaai",
+                       "dawai", "doctor", "hospital", "ambulance", "bachao", "help", "please",
+                       "rukiye", "ek", "minute", "theek", "hai", "nahi", "haan", "ji", "nahin",
+                       "karo", "karna", "chahiye", "zaroorat", "seva", "haazir", "sun", "rahi",
+                       "hoon", "raha", "hain", "main", "tum", "woh", "yeh", "woh", "kaise",
+                       "kaun", "kab", "kahan", "kyun", "ka", "ki", "ke", "ko", "se", "mein",
+                       "par", "aur", "ya", "toh", "phir", "lekin", "agar", "bhi", "sirf",
+                       "abhi", "kal", "aaj", "kal", "subah", "shaam", "raat", "din"]
+
+        hindi_count = sum(1 for word in hindi_words if word in text_lower)
+
+        if hindi_count >= 2:
+            return "hindi"
+        elif any(c in text for c in "अआइईउऊएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसह"):
+            return "hindi"
+        else:
+            return "english"
+
+    def get_response(self, text: str, language: str = "auto") -> tuple[str, str]:
+        text_lower = text.lower().strip()
+
+        if language == "auto":
+            detected_lang = self.detect_language(text)
+        else:
+            detected_lang = language
+
+        if detected_lang == "hindi":
+            responses = self.hindi_responses
+        elif detected_lang == "hinglish":
+            responses = self.hinglish_responses
+        else:
+            responses = self.english_responses
+
+        if any(w in text_lower for w in ["emergency", "bachao", "help", "ambulance", "112", "911", "urgent"]):
+            if detected_lang == "hindi":
+                return ("emergency", "Yeh emergency lag raha hai! Please turant 112 par call karein. "
+                        "Main yahan hoon, aapki help karungi. Please shaant rahein.")
+            else:
+                return ("emergency", "This sounds like an emergency! Please call 112 immediately. "
+                        "I am here with you. Please stay calm.")
+
+        if any(w in text_lower for w in ["medical", "doctor", "hospital", "sick", "ill", "bimar", "dawaai", "medicine"]):
+            if detected_lang == "hindi":
+                return ("medical", "Main medical advice nahi de sakti. Please apne doctor se baat karein "
+                        "ya 112 par call karein agar emergency hai.")
+            else:
+                return ("medical", "I cannot provide medical advice. Please consult your doctor "
+                        "or call 112 if this is an emergency.")
+
+        if any(w in text_lower for w in ["legal", "court", "lawyer", "sue", "case"]):
+            if detected_lang == "hindi":
+                return ("legal", "Main legal advice nahi de sakti. Please ek lawyer se baat karein.")
+            else:
+                return ("legal", "I cannot provide legal advice. Please consult with a lawyer.")
+
+        if any(w in text_lower for w in ["finance", "money", "bank", "loan", "invest"]):
+            if detected_lang == "hindi":
+                return ("financial", "Main financial advice nahi de sakti. Please ek financial advisor se baat karein.")
+            else:
+                return ("financial", "I cannot provide financial advice. Please consult with a financial advisor.")
+
+        if any(w in text_lower for w in ["hello", "hi", "namaste", "hey"]):
+            if detected_lang == "hindi":
+                return ("greeting", random.choice(responses["greeting"]))
+            else:
+                return ("greeting", random.choice(responses["greeting"]))
+
+        if any(w in text_lower for w in ["name", "naam", "who are you", "kaun ho"]):
+            if detected_lang == "hindi":
+                return ("ask_name", random.choice(responses["ask_name"]))
+            else:
+                return ("ask_name", random.choice(responses["ask_name"]))
+
+        if any(w in text_lower for w in ["problem", "issue", "help", "madad", "pareshaani", "complaint"]):
+            if detected_lang == "hindi":
+                return ("ask_issue", random.choice(responses["ask_issue"]))
+            else:
+                return ("ask_issue", random.choice(responses["ask_issue"]))
+
+        if any(w in text_lower for w in ["thank", "dhanyavaad", "shukriya"]):
+            if detected_lang == "hindi":
+                return ("farewell", random.choice(responses["farewell"]))
+            else:
+                return ("farewell", random.choice(responses["farewell"]))
+
+        if any(w in text_lower for w in ["bye", "alvida", "goodbye"]):
+            if detected_lang == "hindi":
+                return ("farewell", "Alvida! Apna khayal rakhiye. Zaroorat ho toh wapas aaiye.")
+            else:
+                return ("farewell", "Goodbye! Take care. Come back if you need help.")
+
+        if any(w in text_lower for w in ["bill", "bill payment", "biil"]):
+            if detected_lang == "hindi":
+                return ("billing", "Aapka bill payment karna hai? Bataiye kis cheez ka bill hai aur kitna amount hai.")
+            else:
+                return ("billing", "You want to pay a bill? Please tell me what the bill is for and the amount.")
+
+        if any(w in text_lower for w in ["account", "account number", "account details"]):
+            if detected_lang == "hindi":
+                return ("account", "Aapka account number kya hai? Please bataiye.")
+            else:
+                return ("account", "What is your account number? Please provide it.")
+
+        if any(w in text_lower for w in ["address", "pata"]):
+            if detected_lang == "hindi":
+                return ("address", "Aapka address kya hai? Please pura address bataiye.")
+            else:
+                return ("address", "What is your address? Please provide your full address.")
+
+        if any(w in text_lower for w in ["phone", "number", "contact"]):
+            if detected_lang == "hindi":
+                return ("contact", "Aapka phone number kya hai? Please bataiye.")
+            else:
+                return ("contact", "What is your phone number? Please provide it.")
+
+        if any(w in text_lower for w in ["date", "when", "kab"]):
+            if detected_lang == "hindi":
+                return ("date", "Kab hua yeh? Date bataiye.")
+            else:
+                return ("date", "When did this happen? Please provide the date.")
+
+        if any(w in text_lower for w in ["yes", "haan", "ji", "correct", "sahi", "theek"]):
+            if detected_lang == "hindi":
+                return ("confirm", "Bahut achha! Koi aur cheez hai jo mujhe batani chahiye?")
+            else:
+                return ("confirm", "Great! Is there anything else you need to tell me?")
+
+        if any(w in text_lower for w in ["no", "nahi", "nahin", "bas"]):
+            if detected_lang == "hindi":
+                return ("resolution", "Theek hai! Main aapki help kar deti hoon. Ek minute please.")
+            else:
+                return ("resolution", "Alright! Let me help you with that. One moment please.")
+
+        if any(w in text_lower for w in ["transfer", "human", "agent", "person"]):
+            if detected_lang == "hindi":
+                return ("escalation", random.choice(responses["escalation"]))
+            else:
+                return ("escalation", random.choice(responses["escalation"]))
+
+        if any(w in text_lower for w in ["sorry", "maaf", "pata nahi"]):
+            if detected_lang == "hindi":
+                return ("ask_details", "Koi baat nahi. Please aur detail mein bataiye, main samajhne ki koshish karungi.")
+            else:
+                return ("ask_details", "No problem. Please provide more details, I will try to understand.")
+
+        if len(text.split()) < 3:
+            if detected_lang == "hindi":
+                return ("ask_details", random.choice(responses["ask_details"]))
+            else:
+                return ("ask_details", random.choice(responses["ask_details"]))
+
+        if detected_lang == "hindi":
+            return ("general", "Main samajh gayi. Please aur detail mein bataiye taaki main aapki behtar madad kar sakoony.")
+        else:
+            return ("general", "I understand. Please provide more details so I can help you better.")
+
+
+agent = CustomerServiceAgent()
+
+
 @app.post("/test")
 async def test_endpoint(req: ChatRequest):
     call_id = str(uuid.uuid4())
     session_id = req.session_id or call_id
-    text = req.text.lower().strip()
+    text = req.text.strip()
 
     user_context = {}
     if req.user_id:
@@ -232,46 +486,15 @@ async def test_endpoint(req: ChatRequest):
         save_chat_message(req.user_id, session_id, "user", req.text)
 
     user_name = user_context.get("name", "")
-    user_language = user_context.get("language", "english")
 
     if not config.openai_api_key or config.openai_api_key.startswith("dummy"):
-        if "hello" in text or "hi" in text or "namaste" in text:
-            if user_name:
-                response = f"Hello {user_name}! It is good to see you again. How can I help you today?"
-            else:
-                response = "Namaste! I am Kataru, your voice companion. What is your name?"
-        elif "my name is" in text or "i am" in text or "mera naam" in text:
-            name = req.text.split("is")[-1].strip() if "is" in req.text else req.text.split("am")[-1].strip()
-            if req.user_id:
-                save_user_context(req.user_id, "name", name)
-            response = f"Nice to meet you, {name}! I will remember your name. How can I help you today?"
-        elif "medicine" in text or "dawaai" in text:
-            if user_name:
-                response = f"{user_name}, please take your medicine after lunch. Shall I remind you again at 3 PM?"
-            else:
-                response = "Please take your medicine after lunch. Would you like me to set a reminder for 3 PM?"
-        elif "emergency" in text or "help" in text or "bachao" in text:
-            response = "This sounds urgent! Please call 112 immediately. I am here with you. Stay calm."
-        elif "weather" in text or "mausam" in text:
-            response = "Today is a beautiful day! Perfect for a short walk in the garden."
-        elif "who are you" in text or "what are you" in text:
-            response = "I am Kataru, which means 'to speak' in Japanese. I am your elderly care voice companion."
-        elif "lonely" in text or "akela" in text or "bored" in text:
-            if user_name:
-                response = f"{user_name}, I understand. I am here with you. Would you like to talk about your day?"
-            else:
-                response = "I understand. I am here with you. Would you like to talk about your day?"
-        elif "thank" in text or "dhanyavaad" in text:
-            response = "You are welcome! I am always here for you."
-        elif "bye" in text or "alvida" in text:
-            response = "Goodbye! Take care of yourself. I will be here whenever you need me."
-        elif "remember" in text:
-            if user_name:
-                response = f"Yes {user_name}, I remember you! You told me your name before."
-            else:
-                response = "I do not know much about you yet. Tell me your name and I will remember it!"
-        else:
-            response = f"I heard: '{req.text}'. How can I help you today?"
+        intent, response = agent.get_response(text)
+
+        if user_name and intent in ["greeting", "farewell"]:
+            if "namaste" in text.lower() or "hello" in text.lower():
+                response = f"Namaste {user_name}! Kya madad chahiye aaj?"
+            elif "thank" in text.lower() or "bye" in text.lower():
+                response = f"Thank you {user_name}! Apna khayal rakhiye."
 
         if req.user_id:
             save_chat_message(req.user_id, session_id, "ai", response)
@@ -282,6 +505,7 @@ async def test_endpoint(req: ChatRequest):
             "call_id": call_id,
             "session_id": session_id,
             "mode": "demo",
+            "intent": intent,
         }
 
     try:
@@ -290,17 +514,25 @@ async def test_endpoint(req: ChatRequest):
         client = AsyncOpenAI(api_key=config.openai_api_key)
 
         system_prompt = (
-            "You are Kataru, a caring multilingual voice assistant for elderly care. "
-            "You help with medicine reminders, daily tasks, emergency calls, and companionship. "
-            "Speak slowly and clearly. Use simple words. Keep responses under 30 words. "
-            "Support Hindi, English, and Hinglish. "
-            "If someone says they need emergency help, immediately tell them to call 112 or 911."
+            "You are Kataru, a multilingual customer support voice AI agent for elderly care. "
+            "You help with general inquiries, information collection, and companionship. "
+            "RULES:\n"
+            "1. Respond in the EXACT language the user used (Hindi, English, or Hinglish)\n"
+            "2. Keep responses under 30 words - this is a voice call\n"
+            "3. NEVER provide medical diagnosis - say 'Please consult your doctor'\n"
+            "4. NEVER provide legal advice - say 'Please consult a lawyer'\n"
+            "5. NEVER provide financial advice - say 'Please consult a financial advisor'\n"
+            "6. For emergencies, say 'Please call 112 immediately'\n"
+            "7. Collect information: name, issue, details, date, address, phone\n"
+            "8. Confirm understanding by repeating back\n"
+            "9. Be calm, patient, and respectful\n"
+            "10. Use simple words\n"
+            "11. Never say you are AI - say 'I am a support assistant'\n"
+            "12. If confidence is low, offer to transfer to human agent"
         )
 
         if user_name:
-            system_prompt += f"\nThe user's name is {user_name}."
-        if user_language:
-            system_prompt += f"\nPrefer responding in {user_language}."
+            system_prompt += f"\n\nThe user's name is {user_name}. Use it in conversation."
 
         messages = [{"role": "system", "content": system_prompt}]
         history = get_chat_history(req.user_id, session_id, limit=10) if req.user_id else []
@@ -331,12 +563,13 @@ async def test_endpoint(req: ChatRequest):
 
     except Exception as e:
         logger.error("test_endpoint_error", error=str(e))
+        intent, fallback_response = agent.get_response(text)
         return {
             "input": req.text,
-            "response": "I am sorry, something went wrong. Please try again.",
+            "response": fallback_response,
             "call_id": call_id,
             "session_id": session_id,
-            "mode": "error",
+            "mode": "fallback",
         }
 
 
