@@ -1,39 +1,15 @@
-# ============================================================================
-# Real-Time Voice AI Agent - Python Dependencies
-# Python 3.11+ required
-# ============================================================================
-
-# --- Web Framework & Server ---
-fastapi>=0.115,<1.0                 # Web framework for REST API endpoints and WebSocket management
-uvicorn[standard]>=0.34,<1.0       # ASGI server; [standard] adds WebSocket, httptools, uvloop
-
-# --- WebSocket & Streaming ---
-websockets>=15.0,<16.0             # WebSocket client for streaming audio to Deepgram STT
-openai>=1.82,<2.0                  # GPT-4o API client for real-time conversation AI
-
-# --- Voice & TTS ---
-elevenlabs>=2.0,<3.0              # ElevenLabs TTS streaming for natural voice synthesis
-
-# --- HTTP & External APIs ---
-httpx>=0.28,<1.0                   # Async HTTP client for Zendesk/Twilio API integrations
-twilio>=9.0,<10.0                  # Twilio SDK for SMS notifications
-
-# --- Data & Storage ---
-redis[hiredis]>=5.0,<6.0          # State caching with fast C-based parser via hiredis
-psycopg[binary]>=3.2,<4.0        # Async PostgreSQL driver for analytics and call logging
-
-# --- Data Validation & Config ---
-pydantic>=2.10,<3.0               # Data validation for all request/response models
-pydantic-settings>=2.6,<3.0       # Environment variable loading into typed settings
-python-dotenv>=1.0,<2.0           # Load .env files for local development
-
-# --- Audio Processing ---
-audioop-lts>=0.2,<1.0             # Audio format conversion; replaces removed stdlib audioop in 3.13+
-
-# --- Observability ---
-prometheus-client>=0.21,<1.0      # Metrics endpoint for monitoring latency, throughput, errors
-structlog>=24.0,<25.0             # Structured JSON logging for production log aggregation
-
-# --- Testing ---
-pytest>=8.0,<9.0                  # Test framework for unit and integration tests
-pytest-asyncio>=0.25,<1.0         # Async test support for testing async handlers and APIs
+fastapi
+uvicorn[standard]
+websockets
+openai
+elevenlabs
+httpx
+twilio
+redis
+psycopg[binary]
+pydantic
+pydantic-settings
+python-dotenv
+audioop-lts
+prometheus-client
+structlog
