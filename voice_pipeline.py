@@ -3,7 +3,6 @@ import json
 import re
 import time
 import uuid
-import random
 from typing import Optional
 from enum import Enum
 
@@ -30,7 +29,6 @@ class VoiceState(Enum):
     PROCESSING = "processing"
     SPEAKING = "speaking"
     INTERRUPTED = "interrupted"
-    WAITING = "waiting"
 
 
 class ConversationState:
@@ -76,7 +74,6 @@ class ConversationState:
             "phase": self.phase.value,
         })
         self.last_user_input = text
-        self.confidence = confidence
 
     def add_ai_message(self, text: str, is_backchannel: bool = False):
         self.messages.append({
@@ -166,7 +163,7 @@ class ConversationFlowEngine:
 
         if hindi_count >= 2:
             return "hindi"
-        elif any(c in text for c in "अआइईउऊएऐओऔकखगघङचछजझञटठडढणतथदधनपफबभमयरलवशषसह"):
+        elif any(c in text for c in "अआइईउऊएऐओऔकखगघङचछjzhञटठडढणतथदधनपफबभमयरलवशषसह"):
             return "hindi"
         elif any(w in text_lower for w in ["yaar", "bhai", "arre", "accha", "chal"]):
             return "hinglish"
@@ -255,10 +252,32 @@ class ConversationFlowEngine:
         return ConversationPhase.DETAILS_COLLECTION
 
     def process_turn(self, session: ConversationState, user_text: str, confidence: float = 1.0) -> str:
+        # Always check for phase-independent keywords first
+        text_lower = user_text.lower()
+
+        # Handle "thanks" from any phase
+        if any(w in text_lower for w in ["thank", "dhanyavaad", "shukriya"]):
+            session.add_user_message(user_text, confidence)
+            if session.detected_language == "hindi":
+                return "Aapka swagat hai! Aur kuch ho toh zaroor bataiye."
+            elif session.detected_language == "hinglish":
+                return "Thanks! Let me know if you need anything else."
+            else:
+                return "You are welcome! Let me know if you need anything else."
+
+        # Handle "bye" from any phase  
+        if any(w in text_lower for w in ["bye", "alvida", "goodbye"]):
+            session.add_user_message(user_text, confidence)
+            session.phase = ConversationPhase.FAREWELL
+            if session.detected_language == "hindi":
+                return "Alvida! Apna khayal rakhiye. Zaroorat ho toh wapas aaiye."
+            else:
+                return "Goodbye! Take care. I am here whenever you need help."
+
         session.add_user_message(user_text, confidence)
 
-        sentiment = self.detect_sentiment(user_text)
-        session.collected_info["sentiment"] = sentiment
+        detected_lang = self.detect_language(user_text)
+        session.detected_language = detected_lang
 
         if confidence < 0.4:
             session.low_confidence_count += 1
@@ -267,9 +286,6 @@ class ConversationFlowEngine:
                 return "Aapki awaaz saaf nahi aayi. Kya aap dobara bol sakte hain?"
             else:
                 return "I could not hear you clearly. Could you please repeat?"
-
-        detected_lang = self.detect_language(user_text)
-        session.detected_language = detected_lang
 
         should_esc, esc_reason = self.should_escalate(session)
         if should_esc:
@@ -280,7 +296,7 @@ class ConversationFlowEngine:
         if confidence < 0.6:
             session.low_confidence_count += 1
             if session.detected_language == "hindi":
-                return "Mujhe samajh nahi aaya. Kya aap thoda aur clearly bol sakte hain?"
+                return "Mujhe samajh nahi aaya. Kya aap thodo aur clearly bol sakte hain?"
             else:
                 return "I did not understand clearly. Could you rephrase that?"
 
@@ -303,42 +319,58 @@ class ConversationFlowEngine:
 
     def _handle_name_collection(self, session: ConversationState) -> str:
         text = session.last_user_input.lower()
-        name = ""
-
-        skip_words = {"hello", "hi", "hey", "namaste", "help", "yes", "no", "haan", "nahi",
-                      "theek", "accha", "bolo", "ji", "ok", "okay", "sure", "please",
-                      "main", "i", "me", "my", "mera", "meri", "want", "need", "have",
-                      "problem", "issue", "bill", "account", "emergency", "help me"}
-
-        for pattern in [r"my name is (\w+)", r"i am (\w+)", r"mera naam (\w+)", r"mera naam hai (\w+)", r"main (\w+) hoon"]:
+        
+        # Words that are common and shouldn't be treated as names
+        skip_words = {
+            "hello", "hi", "hey", "namaste", "help", "yes", "no", "haan", "nahin",
+            "theek", "accha", "bolo", "ji", "ok", "okay", "sure", "please",
+            "main", "i", "me", "my", "mera", "meri", "want", "need", "have",
+            "problem", "issue", "bill", "account", "help me", "details",
+            "information", "about", "so", "just", "really", "actually",
+            "kya", "kaise", "kahan", "kyun", "kaun", "kon"
+        }
+        
+        name = None
+        
+        # Pattern 1: "my name is X", "i am X", "mera naam X", "main X hoon"
+        for pattern in [
+            r"my name is\s+(\w+)",
+            r"i am\s+(\w+)", 
+            r"mera naam\s+(\w+)",
+            r"mera naam hai\s+(\w+)",
+            r"main\s+(\w+)\s+hoon",
+        ]:
             match = re.search(pattern, text)
             if match:
-                candidate = match.group(1).lower()
-                if candidate not in skip_words and len(candidate) >= 2:
+                candidate = match.group(1).lower().strip(".,;!")
+                if candidate and candidate not in skip_words and len(candidate) >= 2:
                     name = match.group(1).title()
                     break
-
+        
+        # Pattern 2: If the sentence contains just one meaningful word (after removing skip words)
         if not name:
-            words = text.split()
-            if len(words) == 1 and len(words[0]) >= 3:
-                candidate = words[0].lower()
-                if candidate not in skip_words:
-                    name = words[0].title()
-
+            words = re.findall(r'\b(\w+)\b', text)
+            meaningful_words = [w for w in words if w.lower() not in skip_words and len(w) >= 2]
+            if len(meaningful_words) == 1:
+                name = meaningful_words[0].title()
+        
         if name:
-            session.collect_info("name", name)
-            session.phase = ConversationPhase.ISSUE_IDENTIFICATION
-            if session.detected_language == "hindi":
-                return f"Namaste {name}! Aapki kya madad kar sakti hoon? Bataiye kya problem hai."
-            elif session.detected_language == "hinglish":
-                return f"Accha {name}! Batao kya ho raha hai? Main help karta hoon."
-            else:
-                return f"Nice to meet you, {name}! What can I help you with today?"
+            # Additional check: make sure the name wasn't just "hello" or common greetings
+            if name.lower() not in ["hello", "hi", "hey", "namaste"] and len(name) >= 2:
+                session.collect_info("name", name)
+                session.phase = ConversationPhase.ISSUE_IDENTIFICATION
+                if session.detected_language == "hindi":
+                    return f"Namaste {name}! Aapki kya madad kar sakti hoon? Bataiye kya problem hai."
+                elif session.detected_language == "hinglish":
+                    return f"Accha {name}! Batao kya ho raha hai? Main help karta hoon."
+                else:
+                    return f"Nice to meet you, {name}! What can I help you with today?"
+        
+        # If no name detected, ask for it
+        if session.detected_language == "hindi":
+            return "Aapka naam kya hai? Please batayen."
         else:
-            if session.detected_language == "hindi":
-                return "Aapka naam kya hai? Please batayen."
-            else:
-                return "What is your name? Please tell me."
+            return "What is your name? Please tell me."
 
     def _handle_issue_identification(self, session: ConversationState) -> str:
         issue_type = self.detect_issue_type(session.last_user_input)
@@ -406,7 +438,7 @@ class ConversationFlowEngine:
             session.phase = ConversationPhase.RESOLUTION
             name = session.collected_info.get("name", "")
             if session.detected_language == "hindi":
-                return f"Bahut achha{(' ' + name) if name else ''}! Main aapki madad karti hoon. Ek minute please."
+                return f"{name}, aapki request process ho rahi hai. Kuch aur madad chahiye?"
             else:
                 return f"Great{(' ' + name) if name else ''}! Let me help you with that. One moment please."
 
