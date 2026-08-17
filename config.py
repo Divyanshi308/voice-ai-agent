@@ -30,6 +30,10 @@ class Config(BaseSettings):
     # SPEECH TO TEXT (Deepgram)
     deepgram_api_key: str = Field(default="")
 
+    # AGORA (Real-Time Voice Platform)
+    agora_app_id: str = Field(default="")
+    agora_app_certificate: str = Field(default="")
+
     # LANGUAGE MODEL (OpenAI)
     openai_api_key: str = Field(default="")
     openai_model: str = Field(default="gpt-4o")

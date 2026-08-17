@@ -3,15 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice AI Agent - 3D Dashboard</title>
+    <title>Voice AI Agent - Agora Conversational AI</title>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
         
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             font-family: 'Rajdhani', sans-serif;
@@ -23,10 +20,8 @@
         
         #bg-canvas {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             z-index: -1;
         }
         
@@ -37,13 +32,8 @@
             border-radius: 20px;
         }
         
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         
-        /* Header */
         .header {
             display: flex;
             justify-content: space-between;
@@ -65,42 +55,20 @@
             background: linear-gradient(45deg, #00f5ff, #ff00ff, #00ff88);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 30px rgba(0, 245, 255, 0.5);
         }
         
-        .status-badge {
+        .agora-badge {
             display: flex;
             align-items: center;
             gap: 10px;
             padding: 10px 20px;
             border-radius: 30px;
+            border: 2px solid #00f5ff;
+            color: #00f5ff;
             font-weight: 600;
+            font-size: 14px;
         }
         
-        .status-badge.online {
-            border: 2px solid #00ff88;
-            color: #00ff88;
-        }
-        
-        .status-badge.offline {
-            border: 2px solid #ff4444;
-            color: #ff4444;
-        }
-        
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: currentColor;
-            animation: pulse 1.5s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 0 0 currentColor; }
-            50% { box-shadow: 0 0 0 10px transparent; }
-        }
-        
-        /* Main Grid */
         .main-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -108,7 +76,6 @@
             margin-bottom: 30px;
         }
         
-        /* Stats Cards */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -140,10 +107,7 @@
             box-shadow: 0 20px 40px rgba(0, 245, 255, 0.2);
         }
         
-        .stat-icon {
-            font-size: 40px;
-            margin-bottom: 10px;
-        }
+        .stat-icon { font-size: 40px; margin-bottom: 10px; }
         
         .stat-value {
             font-family: 'Orbitron', sans-serif;
@@ -161,7 +125,136 @@
             letter-spacing: 2px;
         }
         
-        /* Chat Panel */
+        .voice-panel {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 500px;
+        }
+        
+        .panel-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            margin-bottom: 30px;
+            color: #00f5ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .voice-button-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 30px 0;
+        }
+        
+        .voice-button {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 4px solid #00f5ff;
+            background: rgba(0, 245, 255, 0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .voice-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 50px rgba(0, 245, 255, 0.5);
+        }
+        
+        .voice-button.listening {
+            background: rgba(0, 255, 136, 0.2);
+            border-color: #00ff88;
+            animation: pulse-ring 1.5s infinite;
+        }
+        
+        .voice-button.processing {
+            background: rgba(255, 170, 0, 0.2);
+            border-color: #ffaa00;
+        }
+        
+        .voice-button.error {
+            background: rgba(255, 68, 68, 0.2);
+            border-color: #ff4444;
+        }
+        
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); }
+            70% { box-shadow: 0 0 0 30px rgba(0, 255, 136, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); }
+        }
+        
+        .voice-waves {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .wave {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 2px solid rgba(0, 245, 255, 0.3);
+            opacity: 0;
+        }
+        
+        .voice-button.listening ~ .voice-waves .wave {
+            animation: wave-expand 2s infinite;
+        }
+        
+        .wave:nth-child(1) { width: 220px; height: 220px; animation-delay: 0s; }
+        .wave:nth-child(2) { width: 260px; height: 260px; animation-delay: 0.5s; }
+        .wave:nth-child(3) { width: 300px; height: 300px; animation-delay: 1s; }
+        
+        @keyframes wave-expand {
+            0% { opacity: 0.6; transform: translate(-50%, -50%) scale(0.8); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.2); }
+        }
+        
+        .voice-status {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            color: #888;
+            margin: 20px 0;
+            text-align: center;
+            min-height: 24px;
+        }
+        
+        .voice-status.active { color: #00ff88; }
+        .voice-status.error { color: #ff4444; }
+        
+        .transcript-box {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .transcript-box::-webkit-scrollbar { width: 6px; }
+        .transcript-box::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        .transcript-box::-webkit-scrollbar-thumb { background: #00f5ff; border-radius: 3px; }
+        
+        .transcript-line { margin-bottom: 8px; }
+        .transcript-line.user { color: #00f5ff; }
+        .transcript-line.ai { color: #00ff88; }
+        .transcript-line.system { color: #ffaa00; font-style: italic; }
+        
         .chat-panel {
             padding: 30px;
             display: flex;
@@ -169,35 +262,11 @@
             height: 500px;
         }
         
-        .panel-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 18px;
-            margin-bottom: 20px;
-            color: #00f5ff;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
         .chat-messages {
             flex: 1;
             overflow-y: auto;
             padding: 10px;
             margin-bottom: 20px;
-        }
-        
-        .chat-messages::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .chat-messages::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-        }
-        
-        .chat-messages::-webkit-scrollbar-thumb {
-            background: #00f5ff;
-            border-radius: 3px;
         }
         
         .message {
@@ -216,19 +285,11 @@
         .message.user {
             background: linear-gradient(135deg, #667eea, #764ba2);
             margin-left: auto;
-            border-bottom-right-radius: 5px;
         }
         
         .message.ai {
             background: rgba(0, 245, 255, 0.1);
             border: 1px solid rgba(0, 245, 255, 0.3);
-            border-bottom-left-radius: 5px;
-        }
-        
-        .message-time {
-            font-size: 10px;
-            color: #888;
-            margin-top: 5px;
         }
         
         .input-group {
@@ -245,7 +306,6 @@
             color: white;
             font-size: 16px;
             font-family: 'Rajdhani', sans-serif;
-            transition: all 0.3s ease;
         }
         
         .input-group input:focus {
@@ -254,9 +314,7 @@
             box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
         }
         
-        .input-group input::placeholder {
-            color: #666;
-        }
+        .input-group input::placeholder { color: #666; }
         
         .send-btn {
             background: linear-gradient(135deg, #00f5ff, #00ff88);
@@ -275,70 +333,6 @@
             box-shadow: 0 10px 30px rgba(0, 245, 255, 0.4);
         }
         
-        .send-btn:disabled {
-            background: #333;
-            color: #666;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        
-        /* Activity Panel */
-        .activity-panel {
-            padding: 30px;
-            height: 500px;
-            overflow-y: auto;
-        }
-        
-        .activity-item {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-        
-        .activity-item:hover {
-            background: rgba(255, 255, 255, 0.05);
-            transform: translateX(10px);
-        }
-        
-        .activity-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-        
-        .activity-icon.call { background: rgba(0, 245, 255, 0.2); }
-        .activity-icon.escalation { background: rgba(255, 170, 0, 0.2); }
-        .activity-icon.ticket { background: rgba(0, 255, 136, 0.2); }
-        .activity-icon.alert { background: rgba(255, 68, 68, 0.2); }
-        
-        .activity-details {
-            flex: 1;
-        }
-        
-        .activity-title {
-            font-weight: 600;
-            margin-bottom: 3px;
-        }
-        
-        .activity-subtitle {
-            font-size: 12px;
-            color: #888;
-        }
-        
-        .activity-time {
-            font-size: 12px;
-            color: #666;
-        }
-        
-        /* Features Section */
         .features-section {
             padding: 30px;
             margin-top: 30px;
@@ -366,10 +360,7 @@
             box-shadow: 0 10px 30px rgba(255, 0, 255, 0.2);
         }
         
-        .feature-icon {
-            font-size: 30px;
-            margin-bottom: 10px;
-        }
+        .feature-icon { font-size: 30px; margin-bottom: 10px; }
         
         .feature-name {
             font-size: 12px;
@@ -378,13 +369,10 @@
             letter-spacing: 1px;
         }
         
-        /* 3D Floating Elements */
         .floating-shapes {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             pointer-events: none;
             z-index: -1;
         }
@@ -397,32 +385,9 @@
             animation: float 20s infinite ease-in-out;
         }
         
-        .shape-1 {
-            width: 400px;
-            height: 400px;
-            background: #00f5ff;
-            top: -200px;
-            right: -100px;
-            animation-delay: 0s;
-        }
-        
-        .shape-2 {
-            width: 300px;
-            height: 300px;
-            background: #ff00ff;
-            bottom: -150px;
-            left: -100px;
-            animation-delay: 5s;
-        }
-        
-        .shape-3 {
-            width: 250px;
-            height: 250px;
-            background: #00ff88;
-            top: 50%;
-            left: 50%;
-            animation-delay: 10s;
-        }
+        .shape-1 { width: 400px; height: 400px; background: #00f5ff; top: -200px; right: -100px; }
+        .shape-2 { width: 300px; height: 300px; background: #ff00ff; bottom: -150px; left: -100px; animation-delay: 5s; }
+        .shape-3 { width: 250px; height: 250px; background: #00ff88; top: 50%; left: 50%; animation-delay: 10s; }
         
         @keyframes float {
             0%, 100% { transform: translate(0, 0) rotate(0deg); }
@@ -431,63 +396,18 @@
             75% { transform: translate(-50px, 50px) rotate(270deg); }
         }
         
-        /* Typing Indicator */
-        .typing-indicator {
-            display: none;
-            padding: 10px 15px;
-            margin-bottom: 15px;
-        }
+        .hidden { display: none !important; }
         
-        .typing-indicator.show {
-            display: block;
-        }
-        
-        .typing-dots {
-            display: flex;
-            gap: 5px;
-        }
-        
-        .typing-dots span {
-            width: 8px;
-            height: 8px;
-            background: #00f5ff;
-            border-radius: 50%;
-            animation: typingBounce 1.4s infinite ease-in-out;
-        }
-        
-        .typing-dots span:nth-child(1) { animation-delay: 0s; }
-        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-        
-        @keyframes typingBounce {
-            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-            40% { transform: scale(1); opacity: 1; }
-        }
-        
-        /* Responsive */
         @media (max-width: 1200px) {
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .main-grid {
-                grid-template-columns: 1fr;
-            }
-            .features-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .main-grid { grid-template-columns: 1fr; }
+            .features-grid { grid-template-columns: repeat(3, 1fr); }
         }
         
         @media (max-width: 768px) {
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            .features-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .header {
-                flex-direction: column;
-                gap: 20px;
-            }
+            .stats-grid { grid-template-columns: 1fr; }
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .header { flex-direction: column; gap: 20px; }
         }
     </style>
 </head>
@@ -503,17 +423,17 @@
     <div class="container">
         <header class="header glass">
             <div class="logo">VOICE AI AGENT</div>
-            <div class="status-badge" id="statusBadge">
-                <div class="status-dot"></div>
-                <span id="statusText">Checking...</span>
+            <div class="agora-badge">
+                <span>Powered by</span>
+                <strong>AGORA</strong>
             </div>
         </header>
         
         <div class="stats-grid">
             <div class="stat-card glass">
-                <div class="stat-icon">📞</div>
-                <div class="stat-value" id="totalCalls">0</div>
-                <div class="stat-label">Total Calls</div>
+                <div class="stat-icon">🎤</div>
+                <div class="stat-value" id="voiceSessions">0</div>
+                <div class="stat-label">Voice Sessions</div>
             </div>
             <div class="stat-card glass">
                 <div class="stat-icon">🟢</div>
@@ -526,56 +446,55 @@
                 <div class="stat-label">Accuracy</div>
             </div>
             <div class="stat-card glass">
-                <div class="stat-icon">🚨</div>
-                <div class="stat-value" id="escalations">0</div>
-                <div class="stat-label">Escalations</div>
+                <div class="stat-icon">⚡</div>
+                <div class="stat-value" id="interruptions">0</div>
+                <div class="stat-label">Interruptions</div>
             </div>
         </div>
         
         <div class="main-grid">
-            <div class="chat-panel glass">
+            <div class="voice-panel glass">
                 <div class="panel-title">
-                    <span>💬</span> Test Your AI Agent
+                    <span>🎤</span> Agora Voice Chat
                 </div>
-                <div class="chat-messages" id="chatMessages">
-                    <div class="message ai">
-                        Hello! I'm your AI support assistant. How can I help you today?
-                        <div class="message-time">Just now</div>
+                
+                <div class="voice-button-container">
+                    <div class="voice-button" id="voiceBtn" onclick="toggleVoice()">
+                        🎙️
+                    </div>
+                    <div class="voice-waves">
+                        <div class="wave"></div>
+                        <div class="wave"></div>
+                        <div class="wave"></div>
                     </div>
                 </div>
-                <div class="typing-indicator" id="typingIndicator">
-                    <div class="typing-dots">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <input type="text" id="userInput" placeholder="Type your message..." disabled>
-                    <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>SEND</button>
+                
+                <div class="voice-status" id="voiceStatus">Click to start voice chat</div>
+                
+                <div class="transcript-box" id="transcriptBox">
+                    <div class="transcript-line system">Voice conversation will appear here...</div>
                 </div>
             </div>
             
-            <div class="activity-panel glass">
+            <div class="chat-panel glass">
                 <div class="panel-title">
-                    <span>📊</span> Live Activity
+                    <span>💬</span> Text Chat (Backup)
                 </div>
-                <div id="activityList">
-                    <div class="activity-item">
-                        <div class="activity-icon call">📞</div>
-                        <div class="activity-details">
-                            <div class="activity-title">System Ready</div>
-                            <div class="activity-subtitle">Voice AI Agent initialized</div>
-                        </div>
-                        <div class="activity-time">Now</div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message ai">
+                        You can also type messages here if you prefer text over voice.
                     </div>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="userInput" placeholder="Type your message...">
+                    <button class="send-btn" onclick="sendTextMessage()">SEND</button>
                 </div>
             </div>
         </div>
         
         <div class="features-section glass">
             <div class="panel-title">
-                <span>⚡</span> Features
+                <span>⚡</span> EchoSphere Hackathon Features
             </div>
             <div class="features-grid">
                 <div class="feature-card">
@@ -617,7 +536,6 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         
-        // Create particles
         const particlesGeometry = new THREE.BufferGeometry();
         const particlesCount = 500;
         const posArray = new Float32Array(particlesCount * 3);
@@ -638,7 +556,6 @@
         const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
         scene.add(particlesMesh);
         
-        // Create floating rings
         const rings = [];
         for(let i = 0; i < 5; i++) {
             const ringGeometry = new THREE.TorusGeometry(1 + i * 0.5, 0.02, 16, 100);
@@ -655,123 +572,179 @@
         
         camera.position.z = 3;
         
-        // Animation
         function animate() {
             requestAnimationFrame(animate);
-            
             particlesMesh.rotation.y += 0.001;
             particlesMesh.rotation.x += 0.0005;
-            
             rings.forEach((ring, i) => {
                 ring.rotation.z += 0.002 * (i + 1);
-                ring.scale.set(1 + Math.sin(Date.now() * 0.001 + i) * 0.1, 1 + Math.sin(Date.now() * 0.001 + i) * 0.1, 1);
             });
-            
             renderer.render(scene, camera);
         }
-        
         animate();
         
-        // Handle resize
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
         
-        // API Functions
+        // ====== AGORA VOICE INTEGRATION ======
         const API_URL = window.location.origin;
+        let client = null;
+        let localAudioTrack = null;
+        let isListening = false;
+        let sessionId = null;
+        let interruptionCount = 0;
         
-        async function checkServer() {
+        async function toggleVoice() {
+            if (isListening) {
+                await stopVoice();
+            } else {
+                await startVoice();
+            }
+        }
+        
+        async function startVoice() {
+            const voiceBtn = document.getElementById('voiceBtn');
+            const voiceStatus = document.getElementById('voiceStatus');
+            
             try {
-                const response = await fetch(`${API_URL}/health`);
-                const data = await response.json();
+                voiceBtn.className = 'voice-button processing';
+                voiceStatus.textContent = 'Initializing Agora...';
+                voiceStatus.className = 'voice-status';
                 
-                const badge = document.getElementById('statusBadge');
-                const statusText = document.getElementById('statusText');
+                // Get Agora credentials from server
+                const channelName = 'voice-ai-' + Date.now();
+                const uid = 'user-' + Math.random().toString(36).substr(2, 9);
                 
-                if (response.ok) {
-                    badge.className = 'status-badge online';
-                    statusText.textContent = 'ONLINE';
-                    document.getElementById('userInput').disabled = false;
-                    document.getElementById('sendBtn').disabled = false;
-                    updateMetrics();
+                const tokenResponse = await fetch(`${API_URL}/agora/token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channel_name: channelName, uid: uid })
+                });
+                const tokenData = await tokenResponse.json();
+                
+                // Initialize Agora client
+                voiceStatus.textContent = 'Connecting to Agora...';
+                
+                if (tokenData.app_id) {
+                    // Real Agora connection
+                    client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+                    
+                    client.on('user-published', async (user, mediaType) => {
+                        await client.subscribe(user, mediaType);
+                        if (mediaType === 'audio') {
+                            user.audioTrack.play();
+                            addTranscript('ai', 'AI is speaking...');
+                        }
+                    });
+                    
+                    client.on('user-unpublished', (user, mediaType) => {
+                        if (mediaType === 'audio') {
+                            user.audioTrack?.stop();
+                        }
+                    });
+                    
+                    await client.join(tokenData.app_id, tokenData.channel, tokenData.token, uid);
+                    
+                    localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                    await client.publish(localAudioTrack);
                 } else {
-                    throw new Error('Server error');
+                    // Demo mode - simulate connection
+                    voiceStatus.textContent = 'Demo mode (add Agora keys for real voice)';
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
-            } catch (error) {
-                const badge = document.getElementById('statusBadge');
-                const statusText = document.getElementById('statusText');
-                badge.className = 'status-badge offline';
-                statusText.textContent = 'OFFLINE';
-                document.getElementById('userInput').disabled = true;
-                document.getElementById('sendBtn').disabled = true;
-            }
-        }
-        
-        async function updateMetrics() {
-            try {
-                const response = await fetch(`${API_URL}/metrics`);
-                const data = await response.json();
                 
-                document.getElementById('totalCalls').textContent = data.total_calls || 0;
-                document.getElementById('activeCalls').textContent = data.active_calls || 0;
+                // Start backend session
+                const sessionResponse = await fetch(`${API_URL}/agora/session/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channel_name: channelName, uid: uid })
+                });
+                const sessionData = await sessionResponse.json();
+                sessionId = sessionData.session_id;
+                
+                isListening = true;
+                voiceBtn.className = 'voice-button listening';
+                voiceStatus.textContent = 'Listening... Speak now!';
+                voiceStatus.className = 'voice-status active';
+                
+                addTranscript('system', 'Voice session started. Start speaking!');
+                
             } catch (error) {
-                console.log('Metrics update failed');
+                console.error('Voice start error:', error);
+                voiceBtn.className = 'voice-button error';
+                voiceStatus.textContent = 'Error: ' + error.message;
+                voiceStatus.className = 'voice-status error';
+                
+                setTimeout(() => {
+                    voiceBtn.className = 'voice-button';
+                    voiceStatus.textContent = 'Click to try again';
+                    voiceStatus.className = 'voice-status';
+                }, 3000);
             }
         }
         
-        function addMessage(text, isUser) {
-            const chatMessages = document.getElementById('chatMessages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+        async function stopVoice() {
+            const voiceBtn = document.getElementById('voiceBtn');
+            const voiceStatus = document.getElementById('voiceStatus');
             
-            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            messageDiv.innerHTML = `${text}<div class="message-time">${time}</div>`;
-            
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-        
-        function addActivity(type, title, subtitle) {
-            const activityList = document.getElementById('activityList');
-            const activityDiv = document.createElement('div');
-            activityDiv.className = 'activity-item';
-            
-            const icons = {
-                call: '📞',
-                escalation: '🚨',
-                ticket: '📝',
-                alert: '⚠️'
-            };
-            
-            activityDiv.innerHTML = `
-                <div class="activity-icon ${type}">${icons[type] || '📌'}</div>
-                <div class="activity-details">
-                    <div class="activity-title">${title}</div>
-                    <div class="activity-subtitle">${subtitle}</div>
-                </div>
-                <div class="activity-time">Just now</div>
-            `;
-            
-            activityList.insertBefore(activityDiv, activityList.firstChild);
-            
-            if (activityList.children.length > 10) {
-                activityList.removeChild(activityList.lastChild);
+            try {
+                if (localAudioTrack) {
+                    localAudioTrack.close();
+                    localAudioTrack = null;
+                }
+                
+                if (client) {
+                    await client.leave();
+                    client = null;
+                }
+                
+                if (sessionId) {
+                    await fetch(`${API_URL}/agora/session/${sessionId}/stop`, {
+                        method: 'POST'
+                    });
+                    sessionId = null;
+                }
+                
+                isListening = false;
+                voiceBtn.className = 'voice-button';
+                voiceStatus.textContent = 'Click to start voice chat';
+                voiceStatus.className = 'voice-status';
+                
+                addTranscript('system', 'Voice session ended.');
+                
+            } catch (error) {
+                console.error('Voice stop error:', error);
             }
         }
         
-        async function sendMessage() {
+        function addTranscript(type, text) {
+            const transcriptBox = document.getElementById('transcriptBox');
+            const line = document.createElement('div');
+            line.className = `transcript-line ${type}`;
+            line.textContent = `[${type.toUpperCase()}] ${text}`;
+            transcriptBox.appendChild(line);
+            transcriptBox.scrollTop = transcriptBox.scrollHeight;
+        }
+        
+        // Detect interruption (user speaks while AI is talking)
+        function detectInterruption() {
+            if (isListening) {
+                interruptionCount++;
+                document.getElementById('interruptions').textContent = interruptionCount;
+            }
+        }
+        
+        // ====== TEXT CHAT ======
+        async function sendTextMessage() {
             const input = document.getElementById('userInput');
             const text = input.value.trim();
             if (!text) return;
             
             addMessage(text, true);
             input.value = '';
-            document.getElementById('sendBtn').disabled = true;
-            document.getElementById('typingIndicator').classList.add('show');
-            
-            addActivity('call', 'User Message', text.substring(0, 30) + '...');
             
             try {
                 const response = await fetch(`${API_URL}/test`, {
@@ -779,27 +752,39 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: text })
                 });
-                
                 const data = await response.json();
-                document.getElementById('typingIndicator').classList.remove('show');
-                addMessage(data.response || 'Sorry, I could not process that.', false);
-                addActivity('ticket', 'AI Response', 'Message processed');
+                addMessage(data.response || 'Sorry, could you repeat that?', false);
             } catch (error) {
-                document.getElementById('typingIndicator').classList.remove('show');
                 addMessage('Error connecting to server.', false);
-                addActivity('alert', 'Connection Error', 'Failed to reach server');
             }
-            
-            document.getElementById('sendBtn').disabled = false;
+        }
+        
+        function addMessage(text, isUser) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+            messageDiv.textContent = text;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
         
         document.getElementById('userInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') sendMessage();
+            if (e.key === 'Enter') sendTextMessage();
         });
         
-        // Initialize
-        checkServer();
-        setInterval(checkServer, 5000);
+        // Update metrics
+        async function updateMetrics() {
+            try {
+                const response = await fetch(`${API_URL}/metrics`);
+                const data = await response.json();
+                document.getElementById('voiceSessions').textContent = data.total_agora_sessions || 0;
+                document.getElementById('activeCalls').textContent = data.active_calls || 0;
+            } catch (error) {
+                console.log('Metrics update failed');
+            }
+        }
+        
+        updateMetrics();
         setInterval(updateMetrics, 10000);
     </script>
 </body>

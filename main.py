@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from config import config
 from pipeline import AudioPipeline
+from agora_integration import AgoraTokenGenerator, AgoraVoiceEngine
 
 structlog.configure(
     processors=[
@@ -33,7 +34,20 @@ structlog.configure(
 logger = structlog.get_logger()
 
 pipeline: AudioPipeline = None  # type: ignore[assignment]
+agora_engine: AgoraVoiceEngine = None  # type: ignore[assignment]
+agora_token_gen: AgoraTokenGenerator = None  # type: ignore[assignment]
 start_time = time.time()
+
+
+class AgoraTokenRequest(BaseModel):
+    channel_name: str
+    uid: str = "0"
+    role: int = 1
+
+
+class AgoraAudioRequest(BaseModel):
+    session_id: str
+    audio_data: str
 
 
 class TestRequest(BaseModel):
@@ -42,10 +56,17 @@ class TestRequest(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global pipeline
+    global pipeline, agora_engine, agora_token_gen
 
     pipeline = AudioPipeline()
     await pipeline.initialize()
+
+    agora_engine = AgoraVoiceEngine()
+    agora_token_gen = AgoraTokenGenerator(
+        app_id=config.agora_app_id,
+        app_certificate=config.agora_app_certificate,
+    )
+
     logger.info("voice_ai_agent_started", port=config.port, host=config.host)
     yield
     await pipeline.shutdown()
@@ -83,10 +104,86 @@ async def health():
 
 @app.get("/metrics")
 async def metrics():
+    agora_stats = agora_engine.get_stats() if agora_engine else {}
     return {
         "active_calls": len(pipeline.active_calls),
         "total_calls": pipeline.analytics._total_calls if hasattr(pipeline.analytics, "_total_calls") else len(pipeline.active_calls),
+        "active_agora_sessions": agora_stats.get("active_sessions", 0),
+        "total_agora_sessions": agora_stats.get("total_sessions", 0),
     }
+
+
+@app.post("/agora/token")
+async def generate_agora_token(req: AgoraTokenRequest):
+    if not config.agora_app_id:
+        return {
+            "token": "",
+            "app_id": "",
+            "channel": req.channel_name,
+            "uid": req.uid,
+            "message": "No Agora credentials configured. Using demo mode.",
+        }
+
+    token = agora_token_gen.generate_rtc_token(
+        channel_name=req.channel_name,
+        uid=req.uid,
+        role=req.role,
+    )
+    return {
+        "token": token,
+        "app_id": config.agora_app_id,
+        "channel": req.channel_name,
+        "uid": req.uid,
+    }
+
+
+@app.post("/agora/session/start")
+async def start_agora_session(req: AgoraTokenRequest):
+    import uuid
+    session_id = str(uuid.uuid4())
+
+    async def on_transcript(text, confidence, language, is_final):
+        if is_final:
+            logger.info("agora_transcript", session_id=session_id, text=text)
+
+    session = agora_engine.create_session(
+        session_id=session_id,
+        channel_name=req.channel_name,
+        uid=req.uid,
+        on_transcript=on_transcript,
+    )
+
+    call_id = session_id
+    async def send_audio_fn(chunk: str):
+        logger.debug("agora_audio_out", session_id=session_id, size=len(chunk))
+
+    await pipeline.handle_incoming_call(call_id, req.uid, send_audio_fn)
+
+    return {
+        "session_id": session_id,
+        "channel_name": req.channel_name,
+        "status": "active",
+    }
+
+
+@app.post("/agora/session/{session_id}/audio")
+async def process_agora_audio(session_id: str, req: AgoraAudioRequest):
+    if session_id not in pipeline.active_calls:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    import base64
+    audio_bytes = base64.b64decode(req.audio_data)
+    await pipeline.asr.send_audio(audio_bytes)
+
+    return {"status": "received"}
+
+
+@app.post("/agora/session/{session_id}/stop")
+async def stop_agora_session(session_id: str):
+    if session_id in pipeline.active_calls:
+        await pipeline.end_call(session_id)
+    agora_engine.end_session(session_id)
+    return {"status": "ended"}
 
 
 @app.post("/test")
