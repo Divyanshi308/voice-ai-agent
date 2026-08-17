@@ -29,7 +29,7 @@ class Config(BaseSettings):
 
     # GROQ (FREE - fast LLM)
     groq_api_key: str = Field(default="")
-    groq_model: str = Field(default="allam-2-7b")
+    groq_model: str = Field(default="groq/compound-mini")
 
     # TEXT TO SPEECH (ElevenLabs - BYOK)
     elevenlabs_api_key: str = Field(default="")
