@@ -662,140 +662,152 @@ agent = SmartAgent()
 
 @app.post("/test")
 async def test_endpoint(req: ChatRequest):
-    call_id = str(uuid.uuid4())
-    session_id = req.session_id or call_id
-    text = req.text.strip()
-
-    user_id = 0
     try:
-        user_id = int(req.user_id) if req.user_id else 0
-    except (ValueError, TypeError):
+        call_id = str(uuid.uuid4())
+        session_id = req.session_id or call_id
+        text = req.text.strip()
+
         user_id = 0
-
-    user_context = {}
-    if user_id > 0:
         try:
-            user_context = get_user_context(user_id)
-        except Exception:
-            pass
+            user_id = int(req.user_id) if req.user_id else 0
+        except (ValueError, TypeError):
+            user_id = 0
 
-    user_name = user_context.get("name", "")
+        user_context = {}
+        if user_id > 0:
+            try:
+                user_context = get_user_context(user_id)
+            except Exception:
+                pass
 
-    system_prompt = (
-        "You are Kataru, a friendly, intelligent AI voice assistant. "
-        "You are warm, helpful, and conversational - like a knowledgeable friend. "
-        "RULES:\n"
-        "1. Respond in the EXACT language the user used (Hindi, English, or Hinglish)\n"
-        "2. Be conversational, warm, and natural - like ChatGPT but for voice\n"
-        "3. Give helpful, accurate answers to any question\n"
-        "4. Keep responses concise but informative (under 60 words for voice)\n"
-        "5. For emergencies, say 'Please call 112 immediately'\n"
-        "6. For medical questions, give general info but say 'consult your doctor'\n"
-        "7. Be friendly, patient, and respectful\n"
-        "8. Use simple, clear words"
-    )
+        user_name = user_context.get("name", "")
 
-    if user_name:
-        system_prompt += f"\n\nThe user's name is {user_name}. Use it naturally."
+        system_prompt = (
+            "You are Kataru, a friendly, intelligent AI voice assistant. "
+            "You are warm, helpful, and conversational - like a knowledgeable friend. "
+            "RULES:\n"
+            "1. Respond in the EXACT language the user used (Hindi, English, or Hinglish)\n"
+            "2. Be conversational, warm, and natural - like ChatGPT but for voice\n"
+            "3. Give helpful, accurate answers to any question\n"
+            "4. Keep responses concise but informative (under 60 words for voice)\n"
+            "5. For emergencies, say 'Please call 112 immediately'\n"
+            "6. For medical questions, give general info but say 'consult your doctor'\n"
+            "7. Be friendly, patient, and respectful\n"
+            "8. Use simple, clear words"
+        )
 
-    llm_messages = [{"role": "system", "content": system_prompt}]
+        if user_name:
+            system_prompt += f"\n\nThe user's name is {user_name}. Use it naturally."
 
-    if user_id > 0:
-        try:
-            history = get_chat_history(user_id, session_id, limit=10)
-            for msg in reversed(history):
-                role = "user" if msg["message_role"] == "user" else "assistant"
-                llm_messages.append({"role": role, "content": msg["message_text"]})
-        except Exception:
-            pass
+        llm_messages = [{"role": "system", "content": system_prompt}]
 
-    llm_messages.append({"role": "user", "content": req.text})
+        if user_id > 0:
+            try:
+                history = get_chat_history(user_id, session_id, limit=10)
+                for msg in reversed(history):
+                    role = "user" if msg["message_role"] == "user" else "assistant"
+                    llm_messages.append({"role": role, "content": msg["message_text"]})
+            except Exception:
+                pass
 
-    if config.groq_api_key:
-        try:
-            from openai import AsyncOpenAI
+        llm_messages.append({"role": "user", "content": req.text})
 
-            client = AsyncOpenAI(
-                api_key=config.groq_api_key,
-                base_url="https://api.groq.com/openai/v1",
-            )
+        if config.groq_api_key:
+            try:
+                from openai import AsyncOpenAI
 
-            response_obj = await client.chat.completions.create(
-                model=config.groq_model,
-                messages=llm_messages,
-                max_tokens=250,
-                temperature=0.7,
-            )
+                client = AsyncOpenAI(
+                    api_key=config.groq_api_key,
+                    base_url="https://api.groq.com/openai/v1",
+                )
 
-            response = response_obj.choices[0].message.content
+                response_obj = await client.chat.completions.create(
+                    model=config.groq_model,
+                    messages=llm_messages,
+                    max_tokens=250,
+                    temperature=0.7,
+                )
 
-            if user_id > 0:
-                try:
-                    save_chat_message(user_id, session_id, "user", text)
-                    save_chat_message(user_id, session_id, "ai", response)
-                except Exception:
-                    pass
+                response = response_obj.choices[0].message.content
 
-            return {
-                "input": req.text,
-                "response": response,
-                "call_id": call_id,
-                "session_id": session_id,
-                "mode": "groq_llm",
-            }
+                if user_id > 0:
+                    try:
+                        save_chat_message(user_id, session_id, "user", text)
+                        save_chat_message(user_id, session_id, "ai", response)
+                    except Exception:
+                        pass
 
-        except Exception as e:
-            logger.error("groq_error", error=str(e))
+                return {
+                    "input": req.text,
+                    "response": response,
+                    "call_id": call_id,
+                    "session_id": session_id,
+                    "mode": "groq_llm",
+                }
 
-    if config.openai_api_key and not config.openai_api_key.startswith("dummy"):
-        try:
-            from openai import AsyncOpenAI
+            except Exception as e:
+                logger.error("groq_error", error=str(e))
 
-            client = AsyncOpenAI(api_key=config.openai_api_key)
+        if config.openai_api_key and not config.openai_api_key.startswith("dummy"):
+            try:
+                from openai import AsyncOpenAI
 
-            response_obj = await client.chat.completions.create(
-                model=config.openai_model,
-                messages=llm_messages,
-                max_tokens=250,
-                temperature=0.7,
-            )
+                client = AsyncOpenAI(api_key=config.openai_api_key)
 
-            response = response_obj.choices[0].message.content
+                response_obj = await client.chat.completions.create(
+                    model=config.openai_model,
+                    messages=llm_messages,
+                    max_tokens=250,
+                    temperature=0.7,
+                )
 
-            if user_id > 0:
-                try:
-                    save_chat_message(user_id, session_id, "user", text)
-                    save_chat_message(user_id, session_id, "ai", response)
-                except Exception:
-                    pass
+                response = response_obj.choices[0].message.content
 
-            return {
-                "input": req.text,
-                "response": response,
-                "call_id": call_id,
-                "session_id": session_id,
-                "mode": "openai_llm",
-            }
+                if user_id > 0:
+                    try:
+                        save_chat_message(user_id, session_id, "user", text)
+                        save_chat_message(user_id, session_id, "ai", response)
+                    except Exception:
+                        pass
 
-        except Exception as e:
-            logger.error("openai_error", error=str(e))
+                return {
+                    "input": req.text,
+                    "response": response,
+                    "call_id": call_id,
+                    "session_id": session_id,
+                    "mode": "openai_llm",
+                }
 
-    response = agent.chat(text, session_id)
+            except Exception as e:
+                logger.error("openai_error", error=str(e))
 
-    if user_id > 0:
-        try:
-            save_chat_message(user_id, session_id, "user", text)
-            save_chat_message(user_id, session_id, "ai", response)
-        except Exception:
-            pass
+        response = agent.chat(text, session_id)
 
-    return {
-        "input": req.text,
-        "response": response,
-        "call_id": call_id,
-        "session_id": session_id,
-        "mode": "smart_agent",
-    }
+        if user_id > 0:
+            try:
+                save_chat_message(user_id, session_id, "user", text)
+                save_chat_message(user_id, session_id, "ai", response)
+            except Exception:
+                pass
+
+        return {
+            "input": req.text,
+            "response": response,
+            "call_id": call_id,
+            "session_id": session_id,
+            "mode": "smart_agent",
+        }
+
+    except Exception as e:
+        logger.error("test_endpoint_crash", error=str(e))
+        return {
+            "input": req.text,
+            "response": "Sorry, something went wrong. Please try again.",
+            "call_id": str(uuid.uuid4()),
+            "session_id": req.session_id or "",
+            "mode": "error",
+            "error": str(e),
+        }
 
 
 class VoiceSessionRequest(BaseModel):
@@ -1040,6 +1052,16 @@ async def voice_session_status(session_id: str):
 async def research_endpoint(req: ChatRequest):
     result = await research_engine.research(req.text)
     return result
+
+
+@app.get("/debug/config")
+async def debug_config():
+    return {
+        "groq_key_set": bool(config.groq_api_key),
+        "groq_key_prefix": config.groq_api_key[:10] if config.groq_api_key else "NONE",
+        "groq_model": config.groq_model,
+        "openai_key_set": bool(config.openai_api_key),
+    }
 
 
 if __name__ == "__main__":
