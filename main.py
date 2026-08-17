@@ -36,37 +36,21 @@ active_sessions: dict[str, dict] = {}
 start_time = time.time()
 
 
-class AgentRequest(BaseModel):
-    channel_name: str
-    agent_uid: str = "ai-agent"
-    remote_uids: list[str] = ["*"]
-    greeting: str = ""
-    system_prompt: str = ""
-    stt_model: str = "nova-3"
-    stt_language: str = "multi"
-    llm_model: str = "gpt-4o-mini"
-    tts_vendor: str = "elevenlabs"
-    tts_voice_id: str = ""
-    tts_model: str = "eleven_flash_v2_5"
-    idle_timeout: int = 300
-
-
 class TestRequest(BaseModel):
     text: str
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("voice_ai_agent_started", port=config.port, host=config.host)
+    logger.info("kataru_started", port=config.port, host=config.host)
     yield
     for session_id in list(active_sessions):
         active_sessions.pop(session_id, None)
-    logger.info("voice_ai_agent_stopped")
+    logger.info("kataru_stopped")
 
 
 app = FastAPI(
-    title="Kataru (語る) - Elderly Care Voice AI Agent",
-    description="Multilingual voice AI for elderly care powered by Agora Conversational AI",
+    title="Kataru - Elderly Care Voice AI",
     lifespan=lifespan,
 )
 
@@ -87,15 +71,14 @@ async def root():
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-@app.exception_handler(Exception)
-async def unhandled_exception_handler(request, exc):
-    logger.error("unhandled_exception", path=request.url.path, error=str(exc))
-    raise HTTPException(status_code=500, detail="Internal server error")
-
-
 @app.get("/health")
 async def health():
-    return {"status": "running", "uptime": round(time.time() - start_time, 2)}
+    return {
+        "status": "running",
+        "uptime": round(time.time() - start_time, 2),
+        "agora_configured": bool(config.agora_app_id),
+        "openai_configured": bool(config.openai_api_key),
+    }
 
 
 @app.get("/metrics")
@@ -103,187 +86,34 @@ async def metrics():
     return {
         "active_sessions": len(active_sessions),
         "total_sessions": len(active_sessions),
-        "system": "VoxAssist Elderly Care Agent",
-        "platform": "Agora Conversational AI",
-    }
-
-
-@app.post("/agent/start")
-async def start_agent(req: AgentRequest):
-    try:
-        from agora_agent import (
-            Agent,
-            Agora,
-            Area,
-            DeepgramSTT,
-            OpenAI,
-            ElevenLabsTTS,
-            expires_in_hours,
-        )
-
-        app_id = config.agora_app_id
-        app_certificate = config.agora_app_certificate
-
-        if not app_id or not app_certificate:
-            return {
-                "status": "demo_mode",
-                "message": "Agora credentials not configured. Set AGORA_APP_ID and AGORA_APP_CERTIFICATE in .env",
-                "agent_id": "demo",
-                "channel": req.channel_name,
-            }
-
-        client = Agora(
-            area=Area.US,
-            app_id=app_id,
-            app_certificate=app_certificate,
-        )
-
-        system_prompt = req.system_prompt or (
-            "You are Kataru, a caring multilingual voice assistant for elderly care. "
-            "You help with medicine reminders, daily tasks, emergency calls, and companionship. "
-            "Speak slowly and clearly. Use simple words. "
-            "If someone says they need emergency help, immediately tell them to call 112 or 911. "
-            "Always be patient, warm, and respectful. "
-            "Switch languages naturally if the user switches."
-        )
-
-        greeting = req.greeting or (
-            "Namaste! I am Kataru, your voice companion. "
-            "How can I help you today? "
-            "You can ask me about medicines, daily tasks, or just chat."
-        )
-
-        agent = Agent(
-            client=client,
-            turn_detection={"language": "hi-IN"},
-        ).with_stt(
-            DeepgramSTT(
-                api_key=config.deepgram_api_key or None,
-                model=req.stt_model,
-                language=req.stt_language,
-            )
-        ).with_llm(
-            OpenAI(
-                api_key=config.openai_api_key or None,
-                model=req.llm_model,
-                system_messages=[{"role": "system", "content": system_prompt}],
-                greeting_message=greeting,
-                failure_message="I am sorry, I did not understand. Can you please repeat?",
-                max_history=50,
-                params={
-                    "max_tokens": 200,
-                    "temperature": 0.7,
-                    "top_p": 0.95,
-                },
-            )
-        )
-
-        if req.tts_vendor == "elevenlabs" and config.elevenlabs_api_key:
-            agent = agent.with_tts(
-                ElevenLabsTTS(
-                    key=config.elevenlabs_api_key,
-                    model_id=req.tts_model,
-                    voice_id=req.tts_voice_id or config.elevenlabs_voice_id,
-                    base_url="wss://api.elevenlabs.io/v1",
-                )
-            )
-
-        session_id = str(uuid.uuid4())
-        session = agent.create_session(
-            channel=req.channel_name,
-            agent_uid=req.agent_uid,
-            remote_uids=req.remote_uids,
-            name=f"voxassist-{session_id}",
-            idle_timeout=req.idle_timeout,
-            expires_in=expires_in_hours(1),
-            debug=False,
-        )
-
-        agent_id = session.start()
-
-        active_sessions[session_id] = {
-            "session_id": session_id,
-            "agent_id": agent_id,
-            "channel": req.channel_name,
-            "status": "active",
-            "created_at": time.time(),
-        }
-
-        logger.info("agent_started", session_id=session_id, agent_id=agent_id)
-
-        return {
-            "status": "started",
-            "session_id": session_id,
-            "agent_id": agent_id,
-            "channel": req.channel_name,
-        }
-
-    except ImportError as e:
-        logger.error("agora_agent_not_installed", error=str(e))
-        return {
-            "status": "error",
-            "message": "agora-agents package not installed. Run: pip install agora-agents",
-        }
-    except Exception as e:
-        logger.error("agent_start_failed", error=str(e))
-        return {"status": "error", "message": str(e)}
-
-
-@app.post("/agent/stop")
-async def stop_agent(session_id: str):
-    if session_id in active_sessions:
-        session_data = active_sessions[session_id]
-        try:
-            from agora_agent import Agora, Area
-
-            client = Agora(
-                area=Area.US,
-                app_id=config.agora_app_id,
-                app_certificate=config.agora_app_certificate,
-            )
-            client.agents.stop(agent_id=session_data["agent_id"])
-        except Exception as e:
-            logger.error("agent_stop_error", error=str(e))
-
-        del active_sessions[session_id]
-        return {"status": "stopped", "session_id": session_id}
-
-    return {"status": "not_found", "session_id": session_id}
-
-
-@app.get("/agent/sessions")
-async def list_sessions():
-    return {
-        "active_sessions": len(active_sessions),
-        "sessions": [
-            {
-                "session_id": s["session_id"],
-                "agent_id": s["agent_id"],
-                "channel": s["channel"],
-                "status": s["status"],
-            }
-            for s in active_sessions.values()
-        ],
+        "platform": "Kataru",
     }
 
 
 @app.post("/test")
 async def test_endpoint(req: TestRequest):
     call_id = str(uuid.uuid4())
+    text = req.text.lower().strip()
 
     if not config.openai_api_key or config.openai_api_key.startswith("dummy"):
-        demo_responses = {
-            "hello": "Namaste! How can I help you today?",
-            "medicine": "Please take your medicine after lunch. I will remind you again at 3 PM.",
-            "emergency": "This sounds urgent! Please call 112 immediately.",
-            "weather": "Today is a nice day. Perfect for a walk in the garden.",
-            "name": "I am VoxAssist, your voice companion.",
-        }
-
-        response = demo_responses.get(
-            req.text.lower(),
-            f"I heard: '{req.text}'. This is a demo mode. Configure API keys for real responses.",
-        )
+        if "hello" in text or "hi" in text or "namaste" in text:
+            response = "Namaste! I am Kataru, your voice companion. How can I help you today? You can ask about medicines, daily tasks, or just chat."
+        elif "medicine" in text or "dawaai" in text or "goli" in text:
+            response = "I will remind you to take your medicine after lunch. Would you like me to set a reminder for 3 PM as well?"
+        elif "emergency" in text or "help" in text or "bachao" in text:
+            response = "This sounds urgent! Please call 112 immediately. I am here with you. Stay calm."
+        elif "weather" in text or "mausam" in text:
+            response = "Today is a beautiful day! Perfect for a short walk in the garden. Stay active and healthy!"
+        elif "name" in text or "naam" in text or "who" in text:
+            response = "I am Kataru, which means 'to speak' in Japanese. I am your elderly care voice companion."
+        elif "lonely" in text or "akela" in text or "bored" in text:
+            response = "I understand. I am here with you. Would you like to talk about your day, or shall I tell you a story?"
+        elif "thank" in text or "dhanyavaad" in text:
+            response = "You are welcome! I am always here for you. Is there anything else you need?"
+        elif "bye" in text or "alvida" in text:
+            response = "Goodbye! Take care of yourself. I will be here whenever you need me."
+        else:
+            response = f"I heard: '{req.text}'. I am here to help with medicines, daily tasks, or just chat. What would you like to talk about?"
 
         return {
             "input": req.text,
@@ -300,7 +130,9 @@ async def test_endpoint(req: TestRequest):
         system_prompt = (
             "You are Kataru, a caring multilingual voice assistant for elderly care. "
             "You help with medicine reminders, daily tasks, emergency calls, and companionship. "
-            "Speak slowly and clearly. Use simple words. Keep responses under 30 words."
+            "Speak slowly and clearly. Use simple words. Keep responses under 30 words. "
+            "Support Hindi, English, and Hinglish. "
+            "If someone says they need emergency help, immediately tell them to call 112 or 911."
         )
 
         response = await client.chat.completions.create(
@@ -335,38 +167,41 @@ async def ws_voice(websocket: WebSocket):
     await websocket.accept()
     session_id = str(uuid.uuid4())
 
-    logger.info("websocket_connected", session_id=session_id)
-
     try:
         while True:
             data = await websocket.receive_json()
             event = data.get("event")
 
-            if event == "start_agent":
-                channel = data.get("channel", f"voxassist-{session_id}")
-                response = await start_agent(
-                    AgentRequest(
-                        channel_name=channel,
-                        agent_uid="ai-agent",
-                        greeting=data.get("greeting", ""),
-                        system_prompt=data.get("system_prompt", ""),
-                    )
-                )
-                await websocket.send_json({"event": "agent_started", **response})
+            if event == "chat":
+                text = data.get("text", "")
+                if not config.openai_api_key or config.openai_api_key.startswith("dummy"):
+                    response = f"I heard: '{text}'. This is demo mode."
+                else:
+                    try:
+                        from openai import AsyncOpenAI
 
-            elif event == "stop_agent":
-                await stop_agent(session_id)
-                await websocket.send_json({"event": "agent_stopped"})
+                        client = AsyncOpenAI(api_key=config.openai_api_key)
+                        response_obj = await client.chat.completions.create(
+                            model=config.openai_model,
+                            messages=[
+                                {"role": "system", "content": "You are Kataru, a caring voice assistant."},
+                                {"role": "user", "content": text},
+                            ],
+                            max_tokens=100,
+                        )
+                        response = response_obj.choices[0].message.content
+                    except:
+                        response = "Sorry, I had trouble understanding."
+
+                await websocket.send_json({"event": "response", "text": response})
 
             elif event == "ping":
                 await websocket.send_json({"event": "pong"})
 
     except WebSocketDisconnect:
-        logger.info("websocket_disconnected", session_id=session_id)
-        if session_id in active_sessions:
-            await stop_agent(session_id)
+        pass
     except Exception as e:
-        logger.error("websocket_error", session_id=session_id, error=str(e))
+        logger.error("ws_error", error=str(e))
 
 
 if __name__ == "__main__":
