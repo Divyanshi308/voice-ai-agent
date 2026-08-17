@@ -27,6 +27,10 @@ class Config(BaseSettings):
     openai_api_key: str = Field(default="")
     openai_model: str = Field(default="gpt-4o-mini")
 
+    # GROQ (FREE - fast LLM)
+    groq_api_key: str = Field(default="")
+    groq_model: str = Field(default="allam-2-7b")
+
     # TEXT TO SPEECH (ElevenLabs - BYOK)
     elevenlabs_api_key: str = Field(default="")
     elevenlabs_voice_id: str = Field(default="rachel")

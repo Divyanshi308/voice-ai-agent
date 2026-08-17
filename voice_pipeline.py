@@ -609,71 +609,66 @@ class VoicePipeline:
             return {"text": "", "confidence": 0.0, "language": language, "error": str(e)}
 
     async def generate_response(self, session: ConversationState) -> str:
-        if not config.openai_api_key or config.openai_api_key.startswith("dummy"):
-            from main import agent
-            return agent.chat(session.last_user_input, session.session_id)
+        info = session.collected_info
+        collected_str = json.dumps({k: v for k, v in info.items() if v}, indent=2)
 
-        try:
-            from openai import AsyncOpenAI
+        system_prompt = (
+            "You are Kataru, a friendly, intelligent AI voice assistant. "
+            "You are warm, helpful, and conversational. "
+            "RULES:\n"
+            "1. Respond in the EXACT language the user speaks (Hindi, English, or Hinglish)\n"
+            "2. Be conversational, warm, and natural - like ChatGPT but for voice\n"
+            "3. Give helpful, accurate answers to any question\n"
+            "4. Keep responses concise but informative (under 40 words for voice)\n"
+            "5. For emergencies, say 'Please call 112 immediately'\n"
+            "6. For medical questions, give general info but say 'consult your doctor'\n"
+            "7. Be friendly, patient, and respectful\n"
+            "8. Use simple, clear words"
+        )
 
-            client = AsyncOpenAI(api_key=config.openai_api_key)
+        messages = [{"role": "system", "content": system_prompt}]
+        history = session.get_history(limit=8)
+        for msg in history:
+            role = "user" if msg["role"] == "user" else "assistant"
+            messages.append({"role": role, "content": msg["content"]})
 
-            info = session.collected_info
-            collected_str = json.dumps({k: v for k, v in info.items() if v}, indent=2)
-            progress = session.get_info_collection_progress()
+        if config.groq_api_key:
+            try:
+                from openai import AsyncOpenAI
+                client = AsyncOpenAI(
+                    api_key=config.groq_api_key,
+                    base_url="https://api.groq.com/openai/v1",
+                )
+                response_obj = await client.chat.completions.create(
+                    model=config.groq_model,
+                    messages=messages,
+                    max_tokens=150,
+                    temperature=0.7,
+                )
+                response = response_obj.choices[0].message.content
+                session.add_ai_message(response)
+                return response
+            except Exception as e:
+                logger.error("voice_groq_error", error=str(e))
 
-            system_prompt = f"""You are Kataru, a multilingual customer support voice AI agent for elderly care.
+        if config.openai_api_key and not config.openai_api_key.startswith("dummy"):
+            try:
+                from openai import AsyncOpenAI
+                client = AsyncOpenAI(api_key=config.openai_api_key)
+                response_obj = await client.chat.completions.create(
+                    model=config.openai_model,
+                    messages=messages,
+                    max_tokens=150,
+                    temperature=0.7,
+                )
+                response = response_obj.choices[0].message.content
+                session.add_ai_message(response)
+                return response
+            except Exception as e:
+                logger.error("voice_openai_error", error=str(e))
 
-CONVERSATION PHASE: {session.phase.value}
-COLLECTED INFO: {collected_str}
-INFO PROGRESS: {progress['progress'] * 100:.0f}%
-MISSING INFO: {', '.join(progress['missing']) if progress['missing'] else 'none'}
-LANGUAGE: {session.detected_language}
-SENTIMENT: {info.get('sentiment', 'neutral')}
-INTERRUPTIONS: {session.interruption_count}
-
-CRITICAL RULES:
-1. Respond in the EXACT language the user speaks (Hindi, English, or Hinglish)
-2. Keep responses under 25 words - this is a VOICE call
-3. NEVER provide medical diagnosis - say "Please consult your doctor"
-4. NEVER replace emergency responders - say "Please call 112 immediately"
-5. NEVER provide legal advice - say "Please consult a lawyer"
-6. NEVER provide financial advice - say "Please consult a financial advisor"
-
-CURRENT PHASE INSTRUCTIONS:
-- GREETING: Welcome and ask name
-- NAME_COLLECTION: Ask for name if not collected
-- ISSUE_IDENTIFICATION: Ask what problem they face
-- DETAILS_COLLECTION: Collect missing info (phone, date, details)
-- CONFIRMATION: Confirm collected details
-- RESOLUTION: Resolve their issue
-- ESCALATION: Transfer to human with summary
-- FAREWELL: Warm goodbye
-
-IF USER INTERRUPTED: Say "I am listening. Please go ahead."
-IF LOW CONFIDENCE: Ask to repeat
-IF SENTIMENT NEGATIVE: Acknowledge feelings first"""
-
-            messages = [{"role": "system", "content": system_prompt}]
-            history = session.get_history(limit=8)
-            for msg in history:
-                role = "user" if msg["role"] == "user" else "assistant"
-                messages.append({"role": role, "content": msg["content"]})
-
-            response_obj = await client.chat.completions.create(
-                model=config.openai_model,
-                messages=messages,
-                max_tokens=100,
-                temperature=0.7,
-            )
-
-            response = response_obj.choices[0].message.content
-            session.add_ai_message(response)
-            return response
-
-        except Exception as e:
-            logger.error("llm_error", error=str(e))
-            return self.flow_engine.process_turn(session, session.last_user_input, session.confidence)
+        from main import agent
+        return agent.chat(session.last_user_input, session.session_id)
 
     async def synthesize_speech(self, text: str) -> Optional[bytes]:
         if not config.elevenlabs_api_key or config.elevenlabs_api_key.startswith("dummy"):
