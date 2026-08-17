@@ -8,6 +8,8 @@ import structlog
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from config import config
@@ -61,6 +63,13 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+async def root():
+    return FileResponse("static/index.html")
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request, exc):
     logger.error("unhandled_exception", path=request.url.path, error=str(exc))
@@ -83,6 +92,13 @@ async def metrics():
 @app.post("/test")
 async def test_endpoint(req: TestRequest):
     call_id = str(uuid4())
+    
+    if not config.openai_api_key or config.openai_api_key.startswith("dummy"):
+        return {
+            "input": req.text, 
+            "response": f"I received your message: '{req.text}'. This is a demo response. To get real AI responses, add your OpenAI API key to the .env file.", 
+            "call_id": call_id
+        }
 
     results: dict = {"response": "", "done": False}
 

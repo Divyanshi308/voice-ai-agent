@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice AI Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 90%;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .status-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+        .status-dot.online {
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+        .status-dot.offline {
+            background: #dc3545;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .chat-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 15px;
+            max-width: 80%;
+        }
+        .message.user {
+            background: #667eea;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        .message.ai {
+            background: #e9ecef;
+            color: #333;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+        }
+        input[type="text"]:focus {
+            border-color: #667eea;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #5a6fd6;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .features {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .feature {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .feature span {
+            display: block;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Voice AI Agent</h1>
+        <p class="subtitle">Multilingual Customer Support Agent</p>
+        
+        <div class="status-box">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Checking server...</span>
+        </div>
+        
+        <div class="chat-box" id="chatBox">
+            <div class="message ai">
+                Hello! I'm your AI support assistant. How can I help you today?
+            </div>
+        </div>
+        
+        <div class="input-group">
+            <input type="text" id="userInput" placeholder="Type your message..." disabled>
+            <button id="sendBtn" onclick="sendMessage()" disabled>Send</button>
+        </div>
+        
+        <div class="features">
+            <div class="feature"><span>🌐</span>Multilingual</div>
+            <div class="feature"><span>🔊</span>Voice Support</div>
+            <div class="feature"><span>🛡️</span>Safety Guardrails</div>
+            <div class="feature"><span>👨‍💼</span>Human Escalation</div>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chatBox');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        
+        const API_URL = window.location.origin;
+        
+        async function checkServer() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                if (response.ok) {
+                    statusDot.classList.add('online');
+                    statusDot.classList.remove('offline');
+                    statusText.textContent = 'Server Online';
+                    userInput.disabled = false;
+                    sendBtn.disabled = false;
+                } else {
+                    throw new Error('Server error');
+                }
+            } catch (error) {
+                statusDot.classList.remove('online');
+                statusDot.classList.add('offline');
+                statusText.textContent = 'Server Offline - Make sure python main.py is running';
+                userInput.disabled = true;
+                sendBtn.disabled = true;
+            }
+        }
+        
+        function addMessage(text, isUser) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+            messageDiv.textContent = text;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+            
+            addMessage(text, true);
+            userInput.value = '';
+            sendBtn.disabled = true;
+            
+            try {
+                const response = await fetch(`${API_URL}/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                const data = await response.json();
+                addMessage(data.response || 'Sorry, I could not process that.', false);
+            } catch (error) {
+                addMessage('Error connecting to server. Make sure python main.py is running.', false);
+            }
+            
+            sendBtn.disabled = false;
+        }
+        
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+        
+        checkServer();
+        setInterval(checkServer, 5000);
+    </script>
+</body>
+</html>
