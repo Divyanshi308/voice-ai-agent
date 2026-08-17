@@ -4168,13 +4168,20 @@
                     session_id: currentSessionId
                 })
             })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
+            .then(function(r) {
+                console.log('Response status:', r.status);
+                console.log('Response headers:', r.headers.get('content-type'));
+                return r.text();
+            })
+            .then(function(rawText) {
+                console.log('Raw response:', rawText.substring(0, 500));
+                var data = JSON.parse(rawText);
                 hideTypingIndicator();
 
                 var responseText = data.response || data.message || data.text || null;
 
                 if (!responseText) {
+                    console.log('No response field, using fallback. Data keys:', Object.keys(data));
                     responseText = generateFallbackResponse(text);
                 }
 
@@ -4186,7 +4193,6 @@
 
                 finishSending();
 
-                // Store messages
                 storeChatMessage(userId, currentSessionId, 'user', text);
                 storeChatMessage(userId, currentSessionId, 'assistant', responseText);
 
@@ -4194,7 +4200,8 @@
                     currentSessionId = data.session_id;
                 }
             })
-            .catch(function() {
+            .catch(function(err) {
+                console.error('Fetch error:', err);
                 hideTypingIndicator();
 
                 var fallbackResponse = generateFallbackResponse(text);
