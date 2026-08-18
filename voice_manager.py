@@ -58,8 +58,9 @@ class AgoraVoiceManager:
             if not config.agora_app_id or not config.agora_app_certificate:
                 return None
             try:
-                from agora_agent import Agora
+                from agora_agent import Agora, Area
                 self._client = Agora(
+                    area=Area.AP,
                     app_id=config.agora_app_id,
                     app_certificate=config.agora_app_certificate,
                 )
