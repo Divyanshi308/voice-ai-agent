@@ -25,7 +25,7 @@ from database import (
     get_user_stats, init_db,
 )
 from voice_pipeline import voice_pipeline, ConversationState
-from agora_agent import agora_agent
+from voice_manager import agora_agent
 from research import research_engine
 
 structlog.configure(
@@ -942,70 +942,31 @@ async def voice_websocket(websocket: WebSocket):
 
 @app.get("/api/agora/token")
 async def agora_token(channel: str = "kataru-voice", uid: int = 0):
-    return agora_agent.get_token(channel, uid)
+    return agora_agent.get_rtc_token(channel, uid)
 
 
-@app.get("/api/agora/agent")
-async def agora_agent_config():
+@app.get("/api/agora/config")
+async def agora_config():
     return {
-        "configured": agora_agent.config.is_configured(),
-        "agent": agora_agent.create_agent_config(),
-        "features": {
-            "voice": True,
-            "multilingual": True,
-            "interruption_handling": True,
-            "background_noise_resilience": True,
-            "low_confidence_detection": True,
-            "human_escalation": True,
-            "context_preservation": True,
-        },
-        "safety": {
-            "no_medical_diagnosis": True,
-            "no_emergency_replacement": True,
-            "no_legal_advice": True,
-            "no_financial_advice": True,
-            "no_uncertain_facts": True,
-        },
+        "configured": agora_agent.is_configured(),
+        "app_id": config.agora_app_id if config.agora_app_id else None,
     }
 
 
-@app.post("/api/agora/channel/start")
-async def agora_channel_start(req: VoiceSessionRequest):
-    result = agora_agent.start_session(req.session_id, req.user_id)
+@app.post("/api/agora/voice/start")
+async def agora_voice_start(req: VoiceSessionRequest):
+    result = await agora_agent.start_voice_session(req.session_id, req.user_id)
     return result
 
 
-@app.post("/api/agora/channel/end/{session_id}")
-async def agora_channel_end(session_id: str):
-    return agora_agent.end_session(session_id)
+@app.post("/api/agora/voice/end/{session_id}")
+async def agora_voice_end(session_id: str):
+    return await agora_agent.end_voice_session(session_id)
 
 
-@app.get("/api/agora/channel/{session_id}")
-async def agora_channel_status(session_id: str):
+@app.get("/api/agora/voice/status/{session_id}")
+async def agora_voice_status(session_id: str):
     return agora_agent.get_session_status(session_id)
-
-
-@app.get("/api/agora/sessions")
-async def agora_sessions():
-    return {
-        "active": agora_agent.get_all_sessions(),
-        "completed": agora_agent.get_completed_sessions(),
-    }
-
-
-@app.post("/api/agora/interrupt/{session_id}")
-async def agora_interrupt(session_id: str):
-    return agora_agent.handle_interruption(session_id)
-
-
-@app.post("/api/agora/backchannel/{session_id}")
-async def agora_backchannel(session_id: str):
-    return agora_agent.handle_backchannel(session_id)
-
-
-@app.post("/api/agora/collect/{session_id}")
-async def agora_collect(session_id: str, req: ContextRequest):
-    return agora_agent.collect_information(session_id, req.key, req.value)
 
 
 @app.get("/api/voice/status")

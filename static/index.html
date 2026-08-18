@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Kataru (語る) - Voice AI Agent</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.23.0.js"></script>
     <style>
         /* ============================================
            CSS CUSTOM PROPERTIES / THEME VARIABLES
@@ -4694,6 +4695,11 @@
         var audioChunks = [];
         var autoSpeakEnabled = true;
 
+        /* Agora voice state */
+        var agoraClient = null;
+        var agoraVoiceSessionId = null;
+        var agoraJoined = false;
+
         /* ============================================
            VOICE MODE TOGGLE
            ============================================ */
@@ -4716,26 +4722,26 @@
                 toggleBtn.classList.remove('active');
                 badge.classList.remove('active');
                 if (isRecording) {
-                    stopVoiceRecording();
+                    stopAgoraVoiceChat();
                 }
             }
         };
 
         /* ============================================
-           MICROPHONE CLICK HANDLER
+           MICROPHONE CLICK HANDLER (Agora ConvoAI)
            ============================================ */
         window.handleMicClick = function() {
             if (isRecording) {
-                stopVoiceRecording();
+                stopAgoraVoiceChat();
             } else {
-                startVoiceRecording();
+                startAgoraVoiceChat();
             }
         };
 
         /* ============================================
-           START VOICE RECORDING
+           START AGORA VOICE CHAT
            ============================================ */
-        window.startVoiceRecording = function() {
+        window.startAgoraVoiceChat = function() {
             if (isRecording) return;
 
             if (isSpeaking) {
@@ -4743,38 +4749,130 @@
                 isSpeaking = false;
             }
 
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(function(stream) {
-                    audioStream = stream;
-                    isRecording = true;
+            var micBtn = document.getElementById('micBtn');
+            var micLabel = document.getElementById('micLabel');
+            var visualizer = document.getElementById('audioVisualizer');
+            var transcript = document.getElementById('voiceTranscript');
 
-                    var micBtn = document.getElementById('micBtn');
-                    var micLabel = document.getElementById('micLabel');
-                    var visualizer = document.getElementById('audioVisualizer');
-                    var transcript = document.getElementById('voiceTranscript');
+            micBtn.classList.add('recording');
+            micLabel.classList.add('recording');
+            micLabel.textContent = 'Connecting...';
+            visualizer.classList.add('active');
+            transcript.classList.add('active');
+            transcript.innerHTML = '<span class="voice-transcript-placeholder">Starting voice chat...</span>';
 
-                    micBtn.classList.add('recording');
-                    micLabel.classList.add('recording');
-                    micLabel.textContent = 'Listening... Tap to stop';
-                    visualizer.classList.add('active');
-                    transcript.classList.add('active');
-                    transcript.innerHTML = '<span class="voice-transcript-placeholder">Listening...</span>';
-
-                    createAudioVisualizer(stream);
-                    connectVoiceWebSocket();
-                    startBrowserSpeechRecognition();
-                    startMediaRecording(stream);
+            fetch('/api/agora/voice/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: currentSessionId || '',
+                    user_id: currentUser ? (parseInt(currentUser.user_id) || 0) : 0
                 })
-                .catch(function(err) {
-                    console.error('Microphone access denied:', err);
-                    showToast('Microphone access denied. Please allow microphone access.', 'error');
-                });
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to start voice session');
+                }
+
+                agoraVoiceSessionId = data.session_id;
+                var channelName = data.channel_name;
+                var appId = data.app_id;
+                var agentUid = data.agent_uid;
+
+                micLabel.textContent = 'Joining channel...';
+                transcript.innerHTML = '<span class="voice-transcript-placeholder">Joining voice channel...</span>';
+
+                return joinAgoraChannel(appId, channelName, agentUid);
+            })
+            .then(function() {
+                isRecording = true;
+                micLabel.textContent = 'Listening... Tap to stop';
+                transcript.innerHTML = '<span class="voice-transcript-placeholder">Speak now - AI is listening</span>';
+
+                if (agoraVoiceSessionId) {
+                    appendMessage('assistant', 'Voice chat started. Speak naturally - I can hear you!');
+                }
+            })
+            .catch(function(err) {
+                console.error('Agora voice chat error:', err);
+                micLabel.textContent = 'Tap the mic to start speaking';
+                micBtn.classList.remove('recording');
+                micLabel.classList.remove('recording');
+                visualizer.classList.remove('active');
+                transcript.innerHTML = '<span class="voice-transcript-placeholder">Tap the microphone to start speaking</span>';
+                showToast('Voice chat failed: ' + err.message + '. Make sure microphone access is allowed.', 'error');
+            });
         };
 
         /* ============================================
-           STOP VOICE RECORDING
+           JOIN AGORA CHANNEL
            ============================================ */
-        window.stopVoiceRecording = function() {
+        function joinAgoraChannel(appId, channelName, agentUid) {
+            return new Promise(function(resolve, reject) {
+                if (typeof AgoraRTC === 'undefined') {
+                    reject(new Error('Agora RTC SDK not loaded. Check your internet connection.'));
+                    return;
+                }
+
+                agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+
+                agoraClient.on('user-published', function(user, mediaType) {
+                    console.log('Agent published:', mediaType);
+                    agoraClient.subscribe(user, mediaType).then(function() {
+                        if (mediaType === 'audio') {
+                            user.audioTrack.play();
+                            console.log('Agent audio playing');
+                        }
+                    }).catch(function(err) {
+                        console.error('Subscribe error:', err);
+                    });
+                });
+
+                agoraClient.on('user-unpublished', function(user, mediaType) {
+                    if (mediaType === 'audio') {
+                        if (user.audioTrack) user.audioTrack.stop();
+                    }
+                });
+
+                agoraClient.on('user-joined', function(user) {
+                    console.log('User joined channel:', user.uid);
+                });
+
+                agoraClient.on('user-left', function(user) {
+                    console.log('User left channel:', user.uid);
+                });
+
+                agoraClient.on('connection-state-change', function(curState, prevState) {
+                    console.log('Connection state:', prevState, '->', curState);
+                });
+
+                agoraClient.join(appId, channelName, null, null)
+                    .then(function(uid) {
+                        console.log('Joined channel as uid:', uid);
+                        return AgoraRTC.createMicrophoneAndAudioTracks();
+                    })
+                    .then(function(tracks) {
+                        var micTrack = tracks[0];
+                        return agoraClient.publish(micTrack).then(function() {
+                            console.log('Published mic track');
+                        });
+                    })
+                    .then(function() {
+                        agoraJoined = true;
+                        resolve();
+                    })
+                    .catch(function(err) {
+                        console.error('Join channel error:', err);
+                        reject(err);
+                    });
+            });
+        }
+
+        /* ============================================
+           STOP AGORA VOICE CHAT
+           ============================================ */
+        window.stopAgoraVoiceChat = function() {
             if (!isRecording) return;
 
             isRecording = false;
@@ -4785,41 +4883,41 @@
 
             micBtn.classList.remove('recording');
             micLabel.classList.remove('recording');
-            micLabel.textContent = 'Tap to speak';
+            micLabel.textContent = 'Tap the mic to start speaking';
             visualizer.classList.remove('active');
 
-            if (audioAnimFrame) {
-                cancelAnimationFrame(audioAnimFrame);
-                audioAnimFrame = null;
+            if (agoraClient && agoraJoined) {
+                agoraClient.leave().then(function() {
+                    console.log('Left Agora channel');
+                }).catch(function(err) {
+                    console.error('Leave channel error:', err);
+                });
+                agoraClient = null;
+                agoraJoined = false;
             }
 
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            }
-
-            if (audioStream) {
-                audioStream.getTracks().forEach(function(track) { track.stop(); });
-                audioStream = null;
-            }
-
-            if (audioContext) {
-                audioContext.close();
-                audioContext = null;
-            }
-
-            if (speechRecognition) {
-                speechRecognition.stop();
-                speechRecognition = null;
-            }
-
-            if (voiceWebSocket && voiceWebSocket.readyState === WebSocket.OPEN) {
-                voiceWebSocket.send(JSON.stringify({ type: 'end' }));
-                voiceWebSocket.close();
-                voiceWebSocket = null;
+            if (agoraVoiceSessionId) {
+                fetch('/api/agora/voice/end/' + agoraVoiceSessionId, { method: 'POST' })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        console.log('Voice session ended:', data);
+                        var transcript = document.getElementById('voiceTranscript');
+                        transcript.innerHTML = '<span class="voice-transcript-placeholder">Tap the microphone to start speaking</span>';
+                    })
+                    .catch(function(err) {
+                        console.error('End session error:', err);
+                    });
+                agoraVoiceSessionId = null;
             }
 
             resetAudioBars();
         };
+
+        /* ============================================
+           LEGACY: START VOICE RECORDING (browser STT fallback)
+           ============================================ */
+        window.startVoiceRecording = window.startAgoraVoiceChat;
+        window.stopVoiceRecording = window.stopAgoraVoiceChat;
 
         /* ============================================
            MEDIA RECORDING (send audio chunks)
