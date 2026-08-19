@@ -2066,6 +2066,201 @@
         }
 
         /* ============================================
+           EMOTION & LANGUAGE BADGES
+           ============================================ */
+        .voice-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
+            justify-content: center;
+        }
+        .emotion-badge, .lang-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            font-size: 12px;
+            font-weight: 500;
+            color: #e0e0e0;
+            transition: all 0.3s ease;
+        }
+        .emotion-badge .emotion-icon { font-size: 14px; }
+        .lang-badge .lang-flag { font-size: 14px; }
+
+        .lang-switch-history {
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .lang-switch-label {
+            font-size: 11px;
+            color: #888;
+        }
+        .lang-switch-list {
+            display: flex;
+            gap: 4px;
+        }
+        .lang-switch-item {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            background: rgba(108,99,255,0.15);
+            color: #9d96ff;
+        }
+
+        /* ============================================
+           DASHBOARD
+           ============================================ */
+        .dashboard-page { padding: 16px 0; }
+        .dash-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .dash-stat-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        .dash-stat-icon { font-size: 24px; margin-bottom: 8px; }
+        .dash-stat-num {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--white);
+            display: block;
+        }
+        .dash-stat-label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .dash-charts {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .dash-chart-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .dash-chart-card h3 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #bbb;
+            margin-bottom: 12px;
+        }
+        .dash-bar-chart { display: flex; flex-direction: column; gap: 8px; }
+        .dash-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dash-bar-label {
+            font-size: 12px;
+            color: #aaa;
+            min-width: 70px;
+            text-align: right;
+        }
+        .dash-bar-track {
+            flex: 1;
+            height: 8px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .dash-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        .dash-bar-count {
+            font-size: 12px;
+            color: #888;
+            min-width: 24px;
+        }
+        .dash-empty-chart {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            padding: 20px;
+        }
+        .dash-recent {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .dash-recent h3 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #bbb;
+            margin-bottom: 12px;
+        }
+        .dash-recent-list { display: flex; flex-direction: column; gap: 6px; }
+        .dash-recent-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 8px;
+            font-size: 12px;
+        }
+        .dash-recent-id { color: #6c63ff; font-family: monospace; min-width: 120px; }
+        .dash-recent-type { color: #aaa; min-width: 80px; }
+        .dash-recent-status { font-weight: 600; min-width: 90px; }
+        .dash-recent-lang { color: #888; margin-left: auto; }
+
+        /* Callback scheduling UI */
+        .callback-ui {
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(108,99,255,0.08);
+            border: 1px solid rgba(108,99,255,0.2);
+            border-radius: 8px;
+        }
+        .callback-ui label {
+            font-size: 12px;
+            color: #aaa;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .callback-ui input {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        .callback-ui .callback-btn {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: none;
+            background: #6c63ff;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* ============================================
            RESPONSIVE DESIGN
            ============================================ */
 
@@ -2461,6 +2656,12 @@
             }
         }
 
+        /* Dashboard & new elements responsive */
+        .dash-stats { grid-template-columns: repeat(2, 1fr); }
+        .dash-charts { grid-template-columns: 1fr; }
+        .voice-meta-row { gap: 8px; }
+        .emotion-badge, .lang-badge { font-size: 11px; padding: 3px 8px; }
+
         /* Small phones: 480px and below */
         @media (max-width: 480px) {
             .auth-logo-icon {
@@ -2500,6 +2701,11 @@
             .chat-messages {
                 padding: 10px 12px;
             }
+
+            .dash-stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .dash-stat-card { padding: 12px 8px; }
+            .dash-stat-num { font-size: 22px; }
+            .dash-recent-item { flex-wrap: wrap; gap: 6px; }
 
             .message {
                 max-width: 92%;
@@ -3125,6 +3331,13 @@
                     </svg>
                     <span class="nav-label">Chat</span>
                 </a>
+                <a class="nav-item" data-page="dashboard" onclick="navigateTo('dashboard')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                    <span class="nav-label">Dashboard</span>
+                </a>
                 <a class="nav-item" data-page="settings" onclick="navigateTo('settings')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="3"/>
@@ -3299,9 +3512,30 @@
                                 <span id="confidenceText">Confidence: --</span>
                             </span>
                         </div>
+                        <div class="voice-meta-row">
+                            <span class="emotion-badge hidden" id="emotionBadge">
+                                <span class="emotion-icon" id="emotionIcon">😊</span>
+                                <span id="emotionText">Calm</span>
+                            </span>
+                            <span class="lang-badge hidden" id="langBadge">
+                                <span class="lang-flag" id="langFlag">🌐</span>
+                                <span id="langText">Auto</span>
+                            </span>
+                        </div>
+                        <div class="lang-switch-history hidden" id="langSwitchHistory">
+                            <span class="lang-switch-label">Language switches:</span>
+                            <div class="lang-switch-list" id="langSwitchList"></div>
+                        </div>
                         <div class="escalation-banner hidden" id="escalationBanner">
                             <span class="escalation-icon">🔄</span>
                             <span class="escalation-text" id="escalationText">Connecting to human specialist...</span>
+                            <div class="callback-ui hidden" id="callbackUI">
+                                <label>Schedule a callback for:</label>
+                                <input type="datetime-local" id="callbackTime" />
+                                <label>Phone number (optional):</label>
+                                <input type="tel" id="callbackPhone" placeholder="+91 XXXXX XXXXX" />
+                                <button class="callback-btn" onclick="scheduleCallback()">Schedule Callback</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3521,6 +3755,57 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ========== DASHBOARD VIEW ========== -->
+            <div class="page-view page-content hidden" id="dashboardView">
+                <div class="dashboard-page">
+                    <h2 class="page-title">Analytics Dashboard</h2>
+                    <div class="dash-stats" id="dashStats">
+                        <div class="dash-stat-card">
+                            <div class="dash-stat-icon">🎫</div>
+                            <div class="dash-stat-num" id="dashTotalTickets">0</div>
+                            <div class="dash-stat-label">Total Tickets</div>
+                        </div>
+                        <div class="dash-stat-card">
+                            <div class="dash-stat-icon">🔄</div>
+                            <div class="dash-stat-num" id="dashEscalationRate">0%</div>
+                            <div class="dash-stat-label">Escalation Rate</div>
+                        </div>
+                        <div class="dash-stat-card">
+                            <div class="dash-stat-icon">💬</div>
+                            <div class="dash-stat-num" id="dashTotalSessions">0</div>
+                            <div class="dash-stat-label">Total Sessions</div>
+                        </div>
+                        <div class="dash-stat-card">
+                            <div class="dash-stat-icon">📞</div>
+                            <div class="dash-stat-num" id="dashScheduledCallbacks">0</div>
+                            <div class="dash-stat-label">Scheduled Callbacks</div>
+                        </div>
+                    </div>
+                    <div class="dash-charts">
+                        <div class="dash-chart-card">
+                            <h3>Languages Detected</h3>
+                            <div class="dash-bar-chart" id="dashLangChart"></div>
+                        </div>
+                        <div class="dash-chart-card">
+                            <h3>Issue Types</h3>
+                            <div class="dash-bar-chart" id="dashIssueChart"></div>
+                        </div>
+                        <div class="dash-chart-card">
+                            <h3>Emotions Detected</h3>
+                            <div class="dash-bar-chart" id="dashEmotionChart"></div>
+                        </div>
+                        <div class="dash-chart-card">
+                            <h3>Priority Distribution</h3>
+                            <div class="dash-bar-chart" id="dashPriorityChart"></div>
+                        </div>
+                    </div>
+                    <div class="dash-recent">
+                        <h3>Recent Tickets</h3>
+                        <div class="dash-recent-list" id="dashRecentList"></div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -3536,6 +3821,7 @@
            ============================================ */
         let currentUser = null;
         let currentSessionId = null;
+        let currentTicketId = null;
         let isSending = false;
         let chatMessages = [];
 
@@ -4211,7 +4497,7 @@
             });
 
             // Hide all page views
-            var views = ['chatView', 'settingsView', 'profileView', 'pastChatsView', 'ticketsView'];
+            var views = ['chatView', 'settingsView', 'profileView', 'pastChatsView', 'ticketsView', 'dashboardView'];
             views.forEach(function(viewId) {
                 document.getElementById(viewId).classList.add('hidden');
             });
@@ -4219,6 +4505,7 @@
             // Show target view
             var titles = {
                 'chat': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Kataru - Voice Assistant',
+                'dashboard': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> Analytics Dashboard',
                 'settings': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4"/></svg> Settings',
                 'profile': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Profile',
                 'past-chats': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Past Chats',
@@ -4245,6 +4532,10 @@
                 case 'tickets':
                     document.getElementById('ticketsView').classList.remove('hidden');
                     loadTickets();
+                    break;
+                case 'dashboard':
+                    document.getElementById('dashboardView').classList.remove('hidden');
+                    loadDashboard();
                     break;
             }
         };
@@ -4357,6 +4648,12 @@
             // Add user message to UI
             appendMessage('user', text);
 
+            // Detect emotion and language
+            var detectedEmotion = detectEmotion(text);
+            showEmotion(detectedEmotion);
+            var detectedLang = detectLanguage(text);
+            updateLanguageBadge(detectedLang);
+
             // Show typing indicator
             showTypingIndicator();
 
@@ -4412,7 +4709,10 @@
                                 priority: 'high'
                             })
                         }).then(function(r) { return r.json(); }).then(function(data) {
-                            if (data.ticket) saveLocalTicket(data.ticket);
+                            if (data.ticket) {
+                                saveLocalTicket(data.ticket);
+                                currentTicketId = data.ticket.ticket_id;
+                            }
                         }).catch(function() {});
                     }
                 } else {
@@ -4798,16 +5098,55 @@
         function showEscalation(reason) {
             var banner = document.getElementById('escalationBanner');
             var text = document.getElementById('escalationText');
+            var callbackUI = document.getElementById('callbackUI');
             if (banner && text) {
                 text.textContent = reason || 'Connecting to human specialist...';
                 banner.classList.remove('hidden');
-                showToast(reason || 'Escalating to human specialist...', 'warning');
+                if (callbackUI) callbackUI.classList.remove('hidden');
             }
+        }
         }
 
         function hideEscalation() {
             var banner = document.getElementById('escalationBanner');
+            var callbackUI = document.getElementById('callbackUI');
             if (banner) banner.classList.add('hidden');
+            if (callbackUI) callbackUI.classList.add('hidden');
+        }
+
+        function scheduleCallback() {
+            var timeInput = document.getElementById('callbackTime');
+            var phoneInput = document.getElementById('callbackPhone');
+            var time = timeInput ? timeInput.value : '';
+            var phone = phoneInput ? phoneInput.value : '';
+
+            if (!time) {
+                appendMessage('system', 'Please select a callback time.');
+                return;
+            }
+
+            var userId = currentUser ? (parseInt(currentUser.user_id) || 1) : 1;
+            var ticketId = currentTicketId || ('TKT-' + Date.now().toString(36).toUpperCase());
+
+            fetch('/api/callbacks/schedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: userId,
+                    ticket_id: ticketId,
+                    callback_time: time,
+                    phone_number: phone,
+                    context_summary: 'Scheduled during escalation'
+                })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                appendMessage('system', 'Callback scheduled for ' + new Date(time).toLocaleString() + '. We will call you back.');
+                hideEscalation();
+            })
+            .catch(function() {
+                appendMessage('system', 'Could not schedule callback. Please try again.');
+            });
         }
 
         // Show confidence badge
@@ -4823,6 +5162,200 @@
                     dot.style.background = pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
                 }
             }
+        }
+
+        /* ============================================
+           EMOTION DETECTION & DISPLAY
+           ============================================ */
+        var emotionHistory = [];
+        var lastDetectedLanguage = 'english';
+        var languageSwitches = [];
+
+        var emotionKeywords = {
+            angry: ['angry', 'terrible', 'worst', 'useless', 'stupid', 'waste', 'frustrated', 'upset', 'gussa', 'naraz', 'pareshan'],
+            anxious: ['worried', 'nervous', 'scared', 'afraid', 'what if', 'problem', 'darr', 'pareshan', 'chinta'],
+            confused: ['confused', 'don\'t understand', 'unclear', 'what', 'how', 'kya', 'kaise', 'samajh nahi'],
+            urgent: ['emergency', 'urgent', 'immediately', 'help', 'bachao', 'turant', 'abhi', '112', 'ambulance'],
+            positive: ['thank', 'great', 'good', 'excellent', 'wonderful', 'happy', 'dhanyavaad', 'accha']
+        };
+
+        function detectEmotion(text) {
+            var textLower = text.toLowerCase();
+            var scores = {};
+            for (var emotion in emotionKeywords) {
+                scores[emotion] = 0;
+                emotionKeywords[emotion].forEach(function(kw) {
+                    if (textLower.indexOf(kw) !== -1) scores[emotion]++;
+                });
+            }
+            var maxEmotion = 'calm';
+            var maxScore = 0;
+            for (var e in scores) {
+                if (scores[e] > maxScore) { maxScore = scores[e]; maxEmotion = e; }
+            }
+            return maxScore > 0 ? maxEmotion : 'calm';
+        }
+
+        function showEmotion(emotion) {
+            var badge = document.getElementById('emotionBadge');
+            var icon = document.getElementById('emotionIcon');
+            var text = document.getElementById('emotionText');
+            if (!badge || !icon || !text) return;
+
+            var emotionMap = {
+                calm: { icon: '😌', label: 'Calm', color: '#22c55e' },
+                positive: { icon: '😊', label: 'Positive', color: '#22c55e' },
+                anxious: { icon: '😰', label: 'Anxious', color: '#f59e0b' },
+                confused: { icon: '😕', label: 'Confused', color: '#f59e0b' },
+                angry: { icon: '😠', label: 'Angry', color: '#ef4444' },
+                urgent: { icon: '🚨', label: 'Urgent', color: '#ef4444' }
+            };
+
+            var data = emotionMap[emotion] || emotionMap.calm;
+            icon.textContent = data.icon;
+            text.textContent = data.label;
+            badge.classList.remove('hidden');
+            badge.style.borderColor = data.color + '55';
+
+            emotionHistory.push({ emotion: emotion, time: new Date() });
+            if (emotionHistory.length > 20) emotionHistory.shift();
+        }
+
+        function hideEmotion() {
+            var badge = document.getElementById('emotionBadge');
+            if (badge) badge.classList.add('hidden');
+        }
+
+        /* ============================================
+           LANGUAGE SWITCHING VISUALIZER
+           ============================================ */
+        function detectLanguage(text) {
+            var textLower = text.toLowerCase();
+            var hindiWords = ['namaste', 'kya', 'hai', 'hain', 'mera', 'meri', 'aap', 'bolo', 'bataiye', 'haan', 'nahin', 'ji', 'theek', 'accha'];
+            var words = new Set(textLower.split(/\s+/));
+            var hindiCount = 0;
+            hindiWords.forEach(function(w) { if (words.has(w)) hindiCount++; });
+            return hindiCount >= 2 ? 'hindi' : 'english';
+        }
+
+        function updateLanguageBadge(lang) {
+            var badge = document.getElementById('langBadge');
+            var flag = document.getElementById('langFlag');
+            var text = document.getElementById('langText');
+            if (!badge || !flag || !text) return;
+
+            var langMap = {
+                hindi: { flag: '🇮🇳', label: 'Hindi' },
+                english: { flag: '🇬🇧', label: 'English' },
+                hinglish: { flag: '🔀', label: 'Hinglish' }
+            };
+
+            var data = langMap[lang] || langMap.english;
+            flag.textContent = data.flag;
+            text.textContent = data.label;
+            badge.classList.remove('hidden');
+
+            if (lastDetectedLanguage !== lang) {
+                languageSwitches.push({
+                    from: lastDetectedLanguage,
+                    to: lang,
+                    time: new Date()
+                });
+                lastDetectedLanguage = lang;
+                renderLanguageSwitches();
+            } else {
+                lastDetectedLanguage = lang;
+            }
+        }
+
+        function renderLanguageSwitches() {
+            var container = document.getElementById('langSwitchHistory');
+            var list = document.getElementById('langSwitchList');
+            if (!container || !list) return;
+
+            if (languageSwitches.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            list.innerHTML = languageSwitches.slice(-5).map(function(sw) {
+                var fromLabel = sw.from === 'hindi' ? '🇮🇳' : '🇬🇧';
+                var toLabel = sw.to === 'hindi' ? '🇮🇳' : '🇬🇧';
+                return '<span class="lang-switch-item">' + fromLabel + ' → ' + toLabel + '</span>';
+            }).join('');
+        }
+
+        /* ============================================
+           ANALYTICS DASHBOARD
+           ============================================ */
+        function loadDashboard() {
+            fetch('/api/analytics')
+                .then(function(r) { return r.json(); })
+                .then(function(data) { renderDashboard(data); })
+                .catch(function() {
+                    document.getElementById('dashTotalTickets').textContent = '0';
+                    document.getElementById('dashEscalationRate').textContent = '0%';
+                    document.getElementById('dashTotalSessions').textContent = '0';
+                    document.getElementById('dashScheduledCallbacks').textContent = '0';
+                });
+        }
+
+        function renderDashboard(data) {
+            var t = data.tickets || {};
+            document.getElementById('dashTotalTickets').textContent = t.total || 0;
+            document.getElementById('dashEscalationRate').textContent = (t.escalation_rate || 0) + '%';
+            document.getElementById('dashTotalSessions').textContent = (data.conversations || {}).total_sessions || 0;
+            document.getElementById('dashScheduledCallbacks').textContent = (data.callbacks || {}).scheduled || 0;
+
+            renderBarChart('dashLangChart', data.languages || [], 'language', 'count', '#6c63ff');
+            renderBarChart('dashIssueChart', data.issue_types || [], 'type', 'count', '#22c55e');
+            renderBarChart('dashPriorityChart', data.priorities || [], 'priority', 'count', '#f59e0b');
+
+            // Emotions from local storage
+            var emotionCounts = {};
+            emotionHistory.forEach(function(e) {
+                emotionCounts[e.emotion] = (emotionCounts[e.emotion] || 0) + 1;
+            });
+            var emotionData = Object.keys(emotionCounts).map(function(k) {
+                return { type: k, count: emotionCounts[k] };
+            });
+            renderBarChart('dashEmotionChart', emotionData, 'type', 'count', '#ef4444');
+
+            var recent = data.recent_tickets || [];
+            var recentList = document.getElementById('dashRecentList');
+            if (recent.length === 0) {
+                recentList.innerHTML = '<div class="empty-state" style="padding:20px"><p>No recent tickets</p></div>';
+            } else {
+                recentList.innerHTML = recent.map(function(r) {
+                    return '<div class="dash-recent-item">' +
+                        '<span class="dash-recent-id">' + escapeHtml(r.ticket_id) + '</span>' +
+                        '<span class="dash-recent-type">' + escapeHtml(r.issue_type) + '</span>' +
+                        '<span class="dash-recent-status" style="color:' + (r.status === 'escalated' ? '#f59e0b' : r.status === 'resolved' ? '#22c55e' : '#6c63ff') + '">' + r.status.toUpperCase() + '</span>' +
+                        '<span class="dash-recent-lang">🌐 ' + escapeHtml(r.language || '-') + '</span>' +
+                    '</div>';
+                }).join('');
+            }
+        }
+
+        function renderBarChart(containerId, data, labelKey, countKey, color) {
+            var container = document.getElementById(containerId);
+            if (!container) return;
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="dash-empty-chart">No data yet</div>';
+                return;
+            }
+            var maxCount = Math.max.apply(null, data.map(function(d) { return d[countKey] || 0; }));
+            container.innerHTML = data.map(function(item) {
+                var label = item[labelKey] || 'unknown';
+                var count = item[countKey] || 0;
+                var pct = maxCount > 0 ? (count / maxCount * 100) : 0;
+                return '<div class="dash-bar-row">' +
+                    '<span class="dash-bar-label">' + escapeHtml(label) + '</span>' +
+                    '<div class="dash-bar-track"><div class="dash-bar-fill" style="width:' + pct + '%;background:' + color + '"></div></div>' +
+                    '<span class="dash-bar-count">' + count + '</span>' +
+                '</div>';
+            }).join('');
         }
 
         window.loadChat = function(sessionId) {
@@ -5452,6 +5985,11 @@
             if (data.type === 'user_message' || data.type === 'user_text') {
                 if (data.text) {
                     appendMessage('user', data.text);
+                    // Detect emotion and language from voice
+                    var voiceEmotion = detectEmotion(data.text);
+                    showEmotion(voiceEmotion);
+                    var voiceLang = detectLanguage(data.text);
+                    updateLanguageBadge(voiceLang);
                     storeChatMessage(
                         currentUser ? currentUser.user_id : 'anonymous',
                         currentSessionId, 'user', data.text

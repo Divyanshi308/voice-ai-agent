@@ -88,6 +88,35 @@ def init_db():
     """)
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS callbacks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            ticket_id TEXT NOT NULL,
+            callback_time TEXT NOT NULL,
+            phone_number TEXT DEFAULT '',
+            context_summary TEXT DEFAULT '',
+            status TEXT DEFAULT 'scheduled',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS conversation_analytics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL,
+            user_id INTEGER DEFAULT 0,
+            language_detected TEXT DEFAULT 'english',
+            emotion_detected TEXT DEFAULT 'calm',
+            language_switches INTEGER DEFAULT 0,
+            turns_count INTEGER DEFAULT 0,
+            escalated INTEGER DEFAULT 0,
+            resolution_time REAL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_chat_user ON chat_history(user_id)
     """)
     cursor.execute("""
@@ -414,6 +443,94 @@ def get_ticket(ticket_id: str) -> dict:
     row = conn.execute("SELECT * FROM tickets WHERE ticket_id = ?", (ticket_id,)).fetchone()
     conn.close()
     return dict(row) if row else None
+
+
+def schedule_callback(user_id: int, ticket_id: str, callback_time: str,
+                      phone_number: str = "", context_summary: str = "") -> dict:
+    import uuid
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """INSERT INTO callbacks (user_id, ticket_id, callback_time, phone_number, context_summary)
+           VALUES (?, ?, ?, ?, ?)""",
+        (user_id, ticket_id, callback_time, phone_number, context_summary),
+    )
+    conn.commit()
+    conn.close()
+    return {"success": True, "callback_id": cursor.lastrowid}
+
+
+def get_analytics() -> dict:
+    conn = get_db()
+
+    total_tickets = conn.execute("SELECT COUNT(*) FROM tickets").fetchone()[0]
+    open_tickets = conn.execute("SELECT COUNT(*) FROM tickets WHERE status='open'").fetchone()[0]
+    escalated_tickets = conn.execute("SELECT COUNT(*) FROM tickets WHERE status='escalated'").fetchone()[0]
+    resolved_tickets = conn.execute("SELECT COUNT(*) FROM tickets WHERE status='resolved'").fetchone()[0]
+
+    lang_stats = conn.execute(
+        "SELECT language, COUNT(*) as cnt FROM tickets GROUP BY language ORDER BY cnt DESC"
+    ).fetchall()
+
+    issue_stats = conn.execute(
+        "SELECT issue_type, COUNT(*) as cnt FROM tickets GROUP BY issue_type ORDER BY cnt DESC"
+    ).fetchall()
+
+    priority_stats = conn.execute(
+        "SELECT priority, COUNT(*) as cnt FROM tickets GROUP BY priority ORDER BY cnt DESC"
+    ).fetchall()
+
+    recent_tickets = conn.execute(
+        "SELECT ticket_id, issue_type, status, language, priority, created_at FROM tickets ORDER BY created_at DESC LIMIT 10"
+    ).fetchall()
+
+    total_callbacks = conn.execute("SELECT COUNT(*) FROM callbacks").fetchone()[0]
+    scheduled_callbacks = conn.execute(
+        "SELECT COUNT(*) FROM callbacks WHERE status='scheduled'"
+    ).fetchone()[0]
+
+    total_chats = conn.execute("SELECT COUNT(DISTINCT session_id) FROM chat_history").fetchone()[0]
+    total_messages = conn.execute("SELECT COUNT(*) FROM chat_history").fetchone()[0]
+
+    conn.close()
+
+    return {
+        "tickets": {
+            "total": total_tickets,
+            "open": open_tickets,
+            "escalated": escalated_tickets,
+            "resolved": resolved_tickets,
+            "escalation_rate": round(escalated_tickets / total_tickets * 100, 1) if total_tickets > 0 else 0,
+        },
+        "languages": [{"language": r["language"], "count": r["cnt"]} for r in lang_stats],
+        "issue_types": [{"type": r["issue_type"], "count": r["cnt"]} for r in issue_stats],
+        "priorities": [{"priority": r["priority"], "count": r["cnt"]} for r in priority_stats],
+        "callbacks": {
+            "total": total_callbacks,
+            "scheduled": scheduled_callbacks,
+        },
+        "conversations": {
+            "total_sessions": total_chats,
+            "total_messages": total_messages,
+        },
+        "recent_tickets": [dict(r) for r in recent_tickets],
+    }
+
+
+def save_conversation_analytics(session_id: str, user_id: int, language: str,
+                                emotion: str, language_switches: int, turns: int,
+                                escalated: bool, resolution_time: float):
+    conn = get_db()
+    conn.execute(
+        """INSERT INTO conversation_analytics
+           (session_id, user_id, language_detected, emotion_detected,
+            language_switches, turns_count, escalated, resolution_time)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (session_id, user_id, language, emotion, language_switches, turns,
+         1 if escalated else 0, resolution_time),
+    )
+    conn.commit()
+    conn.close()
 
 
 init_db()

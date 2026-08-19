@@ -24,6 +24,7 @@ from database import (
     save_user_context, get_user_context, delete_chat_session,
     get_user_stats, init_db,
     create_ticket, escalate_ticket, resolve_ticket, get_user_tickets, get_ticket,
+    schedule_callback, get_analytics, save_conversation_analytics,
 )
 from voice_pipeline import voice_pipeline, ConversationState
 from voice_manager import agora_agent
@@ -713,6 +714,13 @@ async def test_endpoint(req: ChatRequest):
         system_prompt = (
             "You are Kataru, a real-time multilingual voice AI support agent for public information "
             "and non-clinical assistance. You help people in India with their issues calmly and professionally.\n\n"
+            "## EMOTION-AWARE RESPONSES\n"
+            "Detect the caller's emotion from their words. Adapt your response style:\n"
+            "- ANGRY (complaining, frustrated): Acknowledge frustration first. Be fast, solution-focused. 'I completely understand your frustration. Let me fix this right away.'\n"
+            "- ANXIOUS (worried, uncertain): Be extra calm and reassuring. 'Don't worry, we will figure this out together.'\n"
+            "- CONFUSED (contradictory info, unclear): Use shorter sentences. Break info into small pieces. 'Let me get your name first.'\n"
+            "- URGENT (emergency language, stressed): Skip non-essential questions. Prioritize critical info.\n"
+            "- CALM: Follow normal flow, be warm and efficient.\n\n"
             "## CONVERSATION FLOW\n"
             "1. Greet warmly and ask how you can help\n"
             "2. Ask for the caller's name if not known\n"
@@ -722,6 +730,10 @@ async def test_endpoint(req: ChatRequest):
             "6. Ask for phone number for follow-up\n"
             "7. CONFIRM understanding by repeating back all collected info and ask 'Is this correct?'\n"
             "8. If you can solve it, give the answer. If not, offer to escalate to a human specialist\n\n"
+            "## SMART CALLBACK\n"
+            "When escalating, ALWAYS offer: 'Would you prefer I schedule a callback? When is a good time for you?'\n"
+            "If they give a time, confirm it. If they want immediate transfer, proceed.\n"
+            "Include: name, issue, emotion detected, language, callback preference in the ticket.\n\n"
             "## LANGUAGE RULES\n"
             "- Match the caller's language. If they speak Hindi, respond in Hindi. English? English.\n"
             "- Handle code-switching: 'Haan, I understand the billing issue'\n"
@@ -1076,6 +1088,7 @@ class TicketRequest(BaseModel):
     conversation_log: list = []
     language: str = "english"
     priority: str = "normal"
+    emotion: str = "calm"
 
 
 class EscalationRequest(BaseModel):
@@ -1085,6 +1098,25 @@ class EscalationRequest(BaseModel):
 
 class ResolutionRequest(BaseModel):
     resolution: str
+
+
+class CallbackRequest(BaseModel):
+    user_id: int
+    ticket_id: str
+    callback_time: str
+    phone_number: str = ""
+    context_summary: str = ""
+
+
+class AnalyticsRequest(BaseModel):
+    session_id: str = ""
+    user_id: int = 0
+    language_detected: str = "english"
+    emotion_detected: str = "calm"
+    language_switches: int = 0
+    turns_count: int = 0
+    escalated: bool = False
+    resolution_time: float = 0
 
 
 @app.post("/api/tickets/create")
@@ -1124,6 +1156,37 @@ async def get_ticket_detail(ticket_id: str):
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return {"ticket": ticket}
+
+
+@app.post("/api/callbacks/schedule")
+async def schedule_callback_endpoint(req: CallbackRequest):
+    return schedule_callback(
+        user_id=req.user_id,
+        ticket_id=req.ticket_id,
+        callback_time=req.callback_time,
+        phone_number=req.phone_number,
+        context_summary=req.context_summary,
+    )
+
+
+@app.get("/api/analytics")
+async def analytics_endpoint():
+    return get_analytics()
+
+
+@app.post("/api/analytics/save")
+async def save_analytics_endpoint(req: AnalyticsRequest):
+    save_conversation_analytics(
+        session_id=req.session_id,
+        user_id=req.user_id,
+        language=req.language_detected,
+        emotion=req.emotion_detected,
+        language_switches=req.language_switches,
+        turns=req.turns_count,
+        escalated=req.escalated,
+        resolution_time=req.resolution_time,
+    )
+    return {"success": True}
 
 
 @app.get("/debug/config")
