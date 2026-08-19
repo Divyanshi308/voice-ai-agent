@@ -77,7 +77,7 @@ class AgoraVoiceManager:
     ) -> dict:
         session_id = str(uuid.uuid4())
         channel = channel_name or f"kataru-{session_id[:8]}"
-        agent_uid = f"agent-{session_id[:8]}"
+        agent_uid = "12345"
 
         client = self._get_client()
         if client is None:
@@ -94,7 +94,7 @@ class AgoraVoiceManager:
                 instructions=AGENT_INSTRUCTIONS,
             )
 
-            agent.with_llm(
+            agent = agent.with_llm(
                 Groq(
                     api_key=config.groq_api_key,
                     model=config.groq_model,
@@ -102,14 +102,14 @@ class AgoraVoiceManager:
                 )
             )
 
-            agent.with_tts(
+            agent = agent.with_tts(
                 MiniMaxTTS(
                     model="speech_2_6_turbo",
                     voice_id="English_captivating_female1",
                 )
             )
 
-            agent.with_stt(
+            agent = agent.with_stt(
                 DeepgramSTT(
                     model="nova-2",
                     language="hi",
@@ -120,7 +120,6 @@ class AgoraVoiceManager:
             from agora_agent import expires_in_hours
 
             session_obj = agent.create_session(
-                client,
                 channel=channel,
                 agent_uid=agent_uid,
                 remote_uids=["*"],
