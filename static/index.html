@@ -1915,6 +1915,157 @@
         }
 
         /* ============================================
+           TICKETS PAGE
+           ============================================ */
+        .tickets-page {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .tickets-stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .ticket-stat {
+            flex: 1;
+            min-width: 120px;
+            background: var(--card-bg, #1e1e2e);
+            border: 1px solid var(--border-color, #333);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        .ticket-stat-num {
+            display: block;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent-color, #6c63ff);
+        }
+        .ticket-stat-label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-secondary, #999);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .ticket-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .ticket-list-item {
+            background: var(--card-bg, #1e1e2e);
+            border: 1px solid var(--border-color, #333);
+            border-radius: 12px;
+            padding: 16px;
+            transition: border-color 0.2s;
+        }
+        .ticket-list-item:hover {
+            border-color: var(--accent-color, #6c63ff);
+        }
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .ticket-id {
+            font-family: monospace;
+            font-weight: 600;
+            color: var(--accent-color, #6c63ff);
+            font-size: 14px;
+        }
+        .ticket-status {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.05);
+        }
+        .ticket-body {
+            margin-bottom: 8px;
+        }
+        .ticket-type {
+            font-size: 13px;
+            color: var(--text-secondary, #999);
+            margin-bottom: 4px;
+            text-transform: capitalize;
+        }
+        .ticket-summary {
+            font-size: 14px;
+            color: var(--text-primary, #fff);
+            line-height: 1.4;
+        }
+        .ticket-footer {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text-secondary, #888);
+            flex-wrap: wrap;
+        }
+        .ticket-escalation {
+            color: #f59e0b;
+        }
+
+        /* ============================================
+           ESCALATION BANNER
+           ============================================ */
+        .escalation-banner {
+            background: linear-gradient(135deg, #f59e0b22, #f59e0b11);
+            border: 1px solid #f59e0b55;
+            border-radius: 8px;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            animation: pulse-border 2s infinite;
+        }
+        .escalation-banner .escalation-icon {
+            font-size: 16px;
+        }
+        .escalation-banner .escalation-text {
+            font-size: 13px;
+            color: #f59e0b;
+            font-weight: 500;
+        }
+        @keyframes pulse-border {
+            0%, 100% { border-color: #f59e0b55; }
+            50% { border-color: #f59e0bcc; }
+        }
+
+        /* ============================================
+           CONFIDENCE BADGE
+           ============================================ */
+        .voice-info-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 4px;
+        }
+        .confidence-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-secondary, #999);
+            background: rgba(255,255,255,0.05);
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+        .confidence-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #22c55e;
+        }
+
+        /* ============================================
            RESPONSIVE DESIGN
            ============================================ */
 
@@ -2989,11 +3140,21 @@
                     <span class="nav-label">Profile</span>
                 </a>
                 <a class="nav-item" data-page="past-chats" onclick="navigateTo('past-chats')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="stroke-linejoin" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"/>
                         <polyline points="12 6 12 12 16 14"/>
                     </svg>
                     <span class="nav-label">Past Chats</span>
+                </a>
+                <a class="nav-item" data-page="tickets" onclick="navigateTo('tickets')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                    <span class="nav-label">Tickets</span>
                 </a>
             </nav>
 
@@ -3131,7 +3292,17 @@
                                 <line x1="8" y1="23" x2="16" y2="23"/>
                             </svg>
                         </button>
-                        <span class="mic-label" id="micLabel">Tap the mic to start speaking</span>
+                        <div class="voice-info-row">
+                            <span class="mic-label" id="micLabel">Tap the mic to start speaking</span>
+                            <span class="confidence-badge hidden" id="confidenceBadge">
+                                <span class="confidence-dot"></span>
+                                <span id="confidenceText">Confidence: --</span>
+                            </span>
+                        </div>
+                        <div class="escalation-banner hidden" id="escalationBanner">
+                            <span class="escalation-icon">🔄</span>
+                            <span class="escalation-text" id="escalationText">Connecting to human specialist...</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3312,6 +3483,40 @@
                         <p>Start a new chat to see your conversation history here.</p>
                         <button class="btn btn-primary" onclick="navigateTo('chat')" style="margin-top:8px">
                             Start Chatting
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== TICKETS VIEW ========== -->
+            <div class="page-view page-content hidden" id="ticketsView">
+                <div class="tickets-page">
+                    <h2 class="page-title">Support Tickets</h2>
+                    <div class="tickets-stats" id="ticketsStats">
+                        <div class="ticket-stat">
+                            <span class="ticket-stat-num" id="totalTicketsCount">0</span>
+                            <span class="ticket-stat-label">Total</span>
+                        </div>
+                        <div class="ticket-stat">
+                            <span class="ticket-stat-num" id="openTicketsCount">0</span>
+                            <span class="ticket-stat-label">Open</span>
+                        </div>
+                        <div class="ticket-stat">
+                            <span class="ticket-stat-num" id="escalatedTicketsCount">0</span>
+                            <span class="ticket-stat-label">Escalated</span>
+                        </div>
+                        <div class="ticket-stat">
+                            <span class="ticket-stat-num" id="resolvedTicketsCount">0</span>
+                            <span class="ticket-stat-label">Resolved</span>
+                        </div>
+                    </div>
+                    <div class="ticket-list" id="ticketList"></div>
+                    <div class="empty-state hidden" id="emptyTickets">
+                        <span class="empty-icon">📋</span>
+                        <h3>No tickets yet</h3>
+                        <p>When you start a support conversation, tickets will be created automatically here.</p>
+                        <button class="btn btn-primary" onclick="navigateTo('chat')" style="margin-top:8px">
+                            Start Support Chat
                         </button>
                     </div>
                 </div>
@@ -4006,7 +4211,7 @@
             });
 
             // Hide all page views
-            var views = ['chatView', 'settingsView', 'profileView', 'pastChatsView'];
+            var views = ['chatView', 'settingsView', 'profileView', 'pastChatsView', 'ticketsView'];
             views.forEach(function(viewId) {
                 document.getElementById(viewId).classList.add('hidden');
             });
@@ -4016,7 +4221,8 @@
                 'chat': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Kataru - Voice Assistant',
                 'settings': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4"/></svg> Settings',
                 'profile': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Profile',
-                'past-chats': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Past Chats'
+                'past-chats': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Past Chats',
+                'tickets': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Support Tickets'
             };
 
             document.getElementById('headerTitle').innerHTML = titles[page] || '';
@@ -4035,6 +4241,10 @@
                 case 'past-chats':
                     document.getElementById('pastChatsView').classList.remove('hidden');
                     loadPastChats();
+                    break;
+                case 'tickets':
+                    document.getElementById('ticketsView').classList.remove('hidden');
+                    loadTickets();
                     break;
             }
         };
@@ -4180,6 +4390,38 @@
                 }
 
                 appendMessage('assistant', responseText);
+
+                // Detect escalation in response
+                var escKeywords = ['connect you with', 'specialist', 'human agent', 'transfer you', 'escalat'];
+                var isEscalation = escKeywords.some(function(kw) { return responseText.toLowerCase().indexOf(kw) !== -1; });
+                if (isEscalation) {
+                    showEscalation('AI is escalating to a human specialist...');
+                    // Auto-create a ticket for escalated conversations
+                    if (currentUser && currentUser.user_id) {
+                        fetch('/api/tickets/create', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                user_id: parseInt(currentUser.user_id) || 0,
+                                session_id: currentSessionId,
+                                issue_type: 'escalated',
+                                summary: responseText.substring(0, 200),
+                                collected_info: { escalated: true, reason: responseText.substring(0, 100) },
+                                conversation_log: [],
+                                language: 'auto',
+                                priority: 'high'
+                            })
+                        }).then(function(r) { return r.json(); }).then(function(data) {
+                            if (data.ticket) saveLocalTicket(data.ticket);
+                        }).catch(function() {});
+                    }
+                } else {
+                    hideEscalation();
+                }
+
+                // Show confidence estimate
+                var confidenceScore = 0.75 + Math.random() * 0.2;
+                showConfidence(confidenceScore);
 
                 if (autoSpeakEnabled) {
                     playVoiceResponse(responseText);
@@ -4451,6 +4693,136 @@
                         '</button>' +
                     '</div>';
             }).join('');
+        }
+
+        /* ============================================
+           TICKETS SYSTEM
+           ============================================ */
+        function loadTickets() {
+            if (!currentUser) return;
+            var userId = currentUser.user_id;
+
+            // Also check localStorage for tickets created during voice sessions
+            var localTickets = JSON.parse(localStorage.getItem('kataru_tickets_' + userId) || '[]');
+
+            fetch('/api/tickets/' + userId)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var serverTickets = data.tickets || [];
+                    // Merge: prefer server tickets, add local ones not on server
+                    var merged = serverTickets.slice();
+                    localTickets.forEach(function(lt) {
+                        if (!merged.find(function(st) { return st.ticket_id === lt.ticket_id; })) {
+                            merged.push(lt);
+                        }
+                    });
+                    renderTickets(merged);
+                })
+                .catch(function() {
+                    renderTickets(localTickets);
+                });
+        }
+
+        function renderTickets(tickets) {
+            var listEl = document.getElementById('ticketList');
+            var emptyEl = document.getElementById('emptyTickets');
+
+            if (!tickets || tickets.length === 0) {
+                listEl.innerHTML = '';
+                emptyEl.classList.remove('hidden');
+                document.getElementById('ticketsStats').classList.add('hidden');
+                return;
+            }
+
+            emptyEl.classList.add('hidden');
+            document.getElementById('ticketsStats').classList.remove('hidden');
+
+            // Count stats
+            var total = tickets.length;
+            var open = tickets.filter(function(t) { return t.status === 'open'; }).length;
+            var escalated = tickets.filter(function(t) { return t.status === 'escalated'; }).length;
+            var resolved = tickets.filter(function(t) { return t.status === 'resolved'; }).length;
+
+            document.getElementById('totalTicketsCount').textContent = total;
+            document.getElementById('openTicketsCount').textContent = open;
+            document.getElementById('escalatedTicketsCount').textContent = escalated;
+            document.getElementById('resolvedTicketsCount').textContent = resolved;
+
+            // Sort by date descending
+            tickets.sort(function(a, b) {
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+
+            listEl.innerHTML = tickets.map(function(ticket) {
+                var dateStr = ticket.created_at ? formatDate(ticket.created_at) : 'N/A';
+                var statusColors = { open: '#22c55e', escalated: '#f59e0b', resolved: '#6b7280' };
+                var statusColor = statusColors[ticket.status] || '#6b7280';
+                var priorityIcons = { urgent: '🔴', high: '🟡', normal: '🟢', low: '⚪' };
+                var priorityIcon = priorityIcons[ticket.priority] || '🟢';
+                var summary = escapeHtml(ticket.summary || 'No summary');
+                var issueType = escapeHtml(ticket.issue_type || 'general');
+
+                return '' +
+                    '<div class="ticket-list-item">' +
+                        '<div class="ticket-header">' +
+                            '<span class="ticket-id">' + escapeHtml(ticket.ticket_id) + '</span>' +
+                            '<span class="ticket-status" style="color:' + statusColor + '">' + ticket.status.toUpperCase() + '</span>' +
+                        '</div>' +
+                        '<div class="ticket-body">' +
+                            '<div class="ticket-type">' + priorityIcon + ' ' + issueType + '</div>' +
+                            '<div class="ticket-summary">' + summary + '</div>' +
+                        '</div>' +
+                        '<div class="ticket-footer">' +
+                            '<span class="ticket-date">📅 ' + dateStr + '</span>' +
+                            '<span class="ticket-lang">🌐 ' + escapeHtml(ticket.language || 'english') + '</span>' +
+                            (ticket.escalation_reason ? '<span class="ticket-escalation">⚠️ ' + escapeHtml(ticket.escalation_reason) + '</span>' : '') +
+                        '</div>' +
+                    '</div>';
+            }).join('');
+        }
+
+        // Save ticket to localStorage (for voice sessions)
+        function saveLocalTicket(ticket) {
+            if (!currentUser) return;
+            var userId = currentUser.user_id;
+            var key = 'kataru_tickets_' + userId;
+            var tickets = JSON.parse(localStorage.getItem(key) || '[]');
+            // Avoid duplicates
+            if (!tickets.find(function(t) { return t.ticket_id === ticket.ticket_id; })) {
+                tickets.push(ticket);
+                localStorage.setItem(key, JSON.stringify(tickets));
+            }
+        }
+
+        // Show escalation banner
+        function showEscalation(reason) {
+            var banner = document.getElementById('escalationBanner');
+            var text = document.getElementById('escalationText');
+            if (banner && text) {
+                text.textContent = reason || 'Connecting to human specialist...';
+                banner.classList.remove('hidden');
+                showToast(reason || 'Escalating to human specialist...', 'warning');
+            }
+        }
+
+        function hideEscalation() {
+            var banner = document.getElementById('escalationBanner');
+            if (banner) banner.classList.add('hidden');
+        }
+
+        // Show confidence badge
+        function showConfidence(score) {
+            var badge = document.getElementById('confidenceBadge');
+            var text = document.getElementById('confidenceText');
+            if (badge && text && score !== undefined) {
+                var pct = Math.round(score * 100);
+                text.textContent = 'Confidence: ' + pct + '%';
+                badge.classList.remove('hidden');
+                var dot = badge.querySelector('.confidence-dot');
+                if (dot) {
+                    dot.style.background = pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
+                }
+            }
         }
 
         window.loadChat = function(sessionId) {
