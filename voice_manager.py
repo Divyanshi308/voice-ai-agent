@@ -114,7 +114,6 @@ class AgoraVoiceManager:
                     model="nova-2",
                     language="hi",
                     smart_format=True,
-                    punctuate=True,
                 )
             )
 
