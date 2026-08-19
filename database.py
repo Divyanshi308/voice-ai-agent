@@ -66,6 +66,28 @@ def init_db():
     """)
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            session_id TEXT NOT NULL,
+            ticket_id TEXT UNIQUE NOT NULL,
+            issue_type TEXT DEFAULT 'general',
+            summary TEXT DEFAULT '',
+            collected_info TEXT DEFAULT '{}',
+            conversation_log TEXT DEFAULT '[]',
+            status TEXT DEFAULT 'open',
+            priority TEXT DEFAULT 'normal',
+            language TEXT DEFAULT 'english',
+            escalated INTEGER DEFAULT 0,
+            escalation_reason TEXT DEFAULT '',
+            resolution TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_chat_user ON chat_history(user_id)
     """)
     cursor.execute("""
@@ -73,6 +95,12 @@ def init_db():
     """)
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_context_user ON user_context(user_id)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_tickets_user ON tickets(user_id)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status)
     """)
 
     conn.commit()
@@ -296,13 +324,96 @@ def get_user_stats(user_id: int) -> dict:
         (user_id,),
     ).fetchone()[0]
 
+    total_tickets = conn.execute(
+        "SELECT COUNT(*) FROM tickets WHERE user_id = ?",
+        (user_id,),
+    ).fetchone()[0]
+
+    open_tickets = conn.execute(
+        "SELECT COUNT(*) FROM tickets WHERE user_id = ? AND status IN ('open', 'escalated')",
+        (user_id,),
+    ).fetchone()[0]
+
     conn.close()
 
     return {
         "total_chats": total_chats,
         "total_messages": total_messages,
         "active_days": active_days,
+        "total_tickets": total_tickets,
+        "open_tickets": open_tickets,
     }
+
+
+def create_ticket(user_id: int, session_id: str, issue_type: str, summary: str,
+                  collected_info: dict = None, conversation_log: list = None,
+                  language: str = "english", priority: str = "normal") -> dict:
+    import json
+    import uuid
+    conn = get_db()
+    ticket_id = f"KTR-{uuid.uuid4().hex[:8].upper()}"
+    cursor = conn.cursor()
+    cursor.execute(
+        """INSERT INTO tickets (user_id, session_id, ticket_id, issue_type, summary,
+           collected_info, conversation_log, status, priority, language)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)""",
+        (user_id, session_id, ticket_id, issue_type, summary,
+         json.dumps(collected_info or {}), json.dumps(conversation_log or []),
+         priority, language),
+    )
+    conn.commit()
+    ticket = dict(cursor.execute("SELECT * FROM tickets WHERE ticket_id = ?", (ticket_id,)).fetchone())
+    conn.close()
+    return {"success": True, "ticket": ticket}
+
+
+def escalate_ticket(ticket_id: str, reason: str) -> bool:
+    import json
+    conn = get_db()
+    conn.execute(
+        """UPDATE tickets SET status = 'escalated', escalated = 1,
+           escalation_reason = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE ticket_id = ?""",
+        (reason, ticket_id),
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def resolve_ticket(ticket_id: str, resolution: str) -> bool:
+    conn = get_db()
+    conn.execute(
+        """UPDATE tickets SET status = 'resolved', resolution = ?,
+           updated_at = CURRENT_TIMESTAMP WHERE ticket_id = ?""",
+        (resolution, ticket_id),
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def get_user_tickets(user_id: int, status: str = None) -> list:
+    conn = get_db()
+    if status:
+        rows = conn.execute(
+            "SELECT * FROM tickets WHERE user_id = ? AND status = ? ORDER BY created_at DESC",
+            (user_id, status),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM tickets WHERE user_id = ? ORDER BY created_at DESC",
+            (user_id,),
+        ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_ticket(ticket_id: str) -> dict:
+    conn = get_db()
+    row = conn.execute("SELECT * FROM tickets WHERE ticket_id = ?", (ticket_id,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 
 init_db()

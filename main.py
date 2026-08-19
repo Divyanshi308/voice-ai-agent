@@ -23,6 +23,7 @@ from database import (
     get_user, update_user, save_chat_message, get_chat_history,
     save_user_context, get_user_context, delete_chat_session,
     get_user_stats, init_db,
+    create_ticket, escalate_ticket, resolve_ticket, get_user_tickets, get_ticket,
 )
 from voice_pipeline import voice_pipeline, ConversationState
 from voice_manager import agora_agent
@@ -710,17 +711,37 @@ async def test_endpoint(req: ChatRequest):
         user_name = user_context.get("name", "")
 
         system_prompt = (
-            "You are Kataru, a friendly, intelligent AI voice assistant. "
-            "You are warm, helpful, and conversational - like a knowledgeable friend. "
-            "RULES:\n"
-            "1. Respond in the EXACT language the user used (Hindi, English, or Hinglish)\n"
-            "2. Be conversational, warm, and natural - like ChatGPT but for voice\n"
-            "3. Give helpful, accurate answers to any question\n"
-            "4. Keep responses concise but informative (under 60 words for voice)\n"
-            "5. For emergencies, say 'Please call 112 immediately'\n"
-            "6. For medical questions, give general info but say 'consult your doctor'\n"
-            "7. Be friendly, patient, and respectful\n"
-            "8. Use simple, clear words"
+            "You are Kataru, a real-time multilingual voice AI support agent for public information "
+            "and non-clinical assistance. You help people in India with their issues calmly and professionally.\n\n"
+            "## CONVERSATION FLOW\n"
+            "1. Greet warmly and ask how you can help\n"
+            "2. Ask for the caller's name if not known\n"
+            "3. Detect their language (Hindi/English/Hinglish) and respond in the SAME language\n"
+            "4. Ask what the problem is and identify the issue type (billing, technical, account, complaint, inquiry)\n"
+            "5. Gather details: when, where, what happened, reference numbers\n"
+            "6. Ask for phone number for follow-up\n"
+            "7. CONFIRM understanding by repeating back all collected info and ask 'Is this correct?'\n"
+            "8. If you can solve it, give the answer. If not, offer to escalate to a human specialist\n\n"
+            "## LANGUAGE RULES\n"
+            "- Match the caller's language. If they speak Hindi, respond in Hindi. English? English.\n"
+            "- Handle code-switching: 'Haan, I understand the billing issue'\n"
+            "- Use 'aap' (respectful Hindi), not 'tum'\n\n"
+            "## SAFETY BOUNDARIES (NEVER cross these)\n"
+            "- Medical: 'I cannot provide medical advice. Please consult a doctor or call 108 for emergencies.'\n"
+            "- Emergency: 'Please call 112 immediately.'\n"
+            "- Legal: 'I cannot provide legal advice. Please consult a qualified lawyer.'\n"
+            "- Financial: 'I recommend consulting a certified financial advisor.'\n"
+            "- Never present uncertain info as confirmed fact\n\n"
+            "## ESCALATION\n"
+            "Offer to transfer to a human specialist when:\n"
+            "- You are not confident about the answer\n"
+            "- The caller explicitly asks for a human\n"
+            "- The issue is outside your scope\n"
+            "- You have asked for clarification 3+ times\n\n"
+            "## STYLE\n"
+            "- Calm, patient, respectful. Keep responses under 60 words.\n"
+            "- Acknowledge feelings before solving problems.\n"
+            "- If you don't understand, ask them to rephrase clearly."
         )
 
         if user_name:
@@ -1044,6 +1065,65 @@ async def voice_session_status(session_id: str):
 async def research_endpoint(req: ChatRequest):
     result = await research_engine.research(req.text)
     return result
+
+
+class TicketRequest(BaseModel):
+    user_id: int
+    session_id: str = ""
+    issue_type: str = "general"
+    summary: str = ""
+    collected_info: dict = {}
+    conversation_log: list = []
+    language: str = "english"
+    priority: str = "normal"
+
+
+class EscalationRequest(BaseModel):
+    ticket_id: str
+    reason: str
+
+
+class ResolutionRequest(BaseModel):
+    resolution: str
+
+
+@app.post("/api/tickets/create")
+async def create_ticket_endpoint(req: TicketRequest):
+    return create_ticket(
+        user_id=req.user_id,
+        session_id=req.session_id,
+        issue_type=req.issue_type,
+        summary=req.summary,
+        collected_info=req.collected_info,
+        conversation_log=req.conversation_log,
+        language=req.language,
+        priority=req.priority,
+    )
+
+
+@app.post("/api/tickets/escalate")
+async def escalate_ticket_endpoint(req: EscalationRequest):
+    escalate_ticket(req.ticket_id, req.reason)
+    return {"success": True, "message": "Ticket escalated to human specialist"}
+
+
+@app.post("/api/tickets/{ticket_id}/resolve")
+async def resolve_ticket_endpoint(ticket_id: str, req: ResolutionRequest):
+    resolve_ticket(ticket_id, req.resolution)
+    return {"success": True}
+
+
+@app.get("/api/tickets/{user_id}")
+async def get_tickets(user_id: int, status: str = None):
+    return {"tickets": get_user_tickets(user_id, status)}
+
+
+@app.get("/api/tickets/detail/{ticket_id}")
+async def get_ticket_detail(ticket_id: str):
+    ticket = get_ticket(ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    return {"ticket": ticket}
 
 
 @app.get("/debug/config")
