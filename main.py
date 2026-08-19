@@ -152,6 +152,33 @@ async def oauth_login(req: OAuthRequest):
     return authenticate_oauth(username, req.email, req.full_name, req.provider, req.provider_id)
 
 
+@app.post("/api/auth/google")
+async def google_login(req: OAuthRequest):
+    import httpx
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": req.provider_id},
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                email = data.get("email", req.email)
+                name = data.get("name", req.full_name)
+                picture = data.get("picture", "")
+                google_id = data.get("sub", req.provider_id)
+                username = email.split("@")[0]
+                result = authenticate_oauth(username, email, name, "google", google_id)
+                if result.get("user"):
+                    result["user"]["avatar_url"] = picture
+                return result
+            else:
+                return {"success": False, "error": "Invalid Google token"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 @app.get("/api/user/{user_id}")
 async def get_user_profile(user_id: int):
     user = get_user(user_id)

@@ -52,6 +52,10 @@ class Config(BaseSettings):
     log_level: str = Field(default="INFO")
     environment: str = Field(default="development")
 
+    # GOOGLE OAUTH
+    google_client_id: str = Field(default="")
+    google_client_secret: str = Field(default="")
+
     def __repr__(self) -> str:
         return (
             "Config(\n"
