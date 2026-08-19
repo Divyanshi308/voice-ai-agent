@@ -98,6 +98,7 @@ class AgoraVoiceManager:
                 Groq(
                     api_key=config.groq_api_key,
                     model=config.groq_model,
+                    base_url="https://api.groq.com/openai/v1",
                 )
             )
 
