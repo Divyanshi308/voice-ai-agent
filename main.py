@@ -13,7 +13,7 @@ import structlog
 import uvicorn
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -179,6 +179,118 @@ async def google_login(req: OAuthRequest):
                 return {"success": False, "error": "Invalid Google token"}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+@app.get("/api/auth/google/redirect")
+async def google_redirect():
+    client_id = config.google_client_id
+    if not client_id:
+        raise HTTPException(status_code=500, detail="Google Client ID not configured")
+
+    base_url = str(app.user_app.__dict__.get("title", "")) if hasattr(app, "user_app") else ""
+
+    from starlette.requests import Request
+    import urllib.parse
+
+    client = None
+
+    redirect_uri = "https://voice-ai-agent-37b8.onrender.com/api/auth/google/callback"
+
+    scopes = urllib.parse.quote("openid email profile")
+    auth_url = (
+        f"https://accounts.google.com/o/oauth2/v2/auth"
+        f"?client_id={client_id}"
+        f"&redirect_uri={urllib.parse.quote(redirect_uri)}"
+        f"&response_type=code"
+        f"&scope={scopes}"
+        f"&access_type=offline"
+        f"&prompt=consent"
+    )
+
+    return RedirectResponse(url=auth_url)
+
+
+@app.get("/api/auth/google/callback")
+async def google_callback(code: str = None, error: str = None):
+    import httpx
+    import urllib.parse
+
+    if error:
+        return RedirectResponse(
+            url=f"/?auth=error&message={urllib.parse.quote(error)}"
+        )
+
+    if not code:
+        return RedirectResponse(
+            url="/?auth=error&message=No+authorization+code+received"
+        )
+
+    try:
+        async with httpx.AsyncClient() as client:
+            token_resp = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "code": code,
+                    "client_id": config.google_client_id,
+                    "client_secret": config.google_client_secret,
+                    "redirect_uri": "https://voice-ai-agent-37b8.onrender.com/api/auth/google/callback",
+                    "grant_type": "authorization_code",
+                },
+                timeout=15,
+            )
+
+            if token_resp.status_code != 200:
+                return RedirectResponse(
+                    url="/?auth=error&message=Failed+to+exchange+authorization+code"
+                )
+
+            token_data = token_resp.json()
+            id_token = token_data.get("id_token")
+
+            if not id_token:
+                return RedirectResponse(
+                    url="/?auth=error&message=No+ID+token+received"
+                )
+
+            userinfo_resp = await client.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": id_token},
+                timeout=10,
+            )
+
+            if userinfo_resp.status_code != 200:
+                return RedirectResponse(
+                    url="/?auth=error&message=Failed+to+verify+ID+token"
+                )
+
+            userinfo = userinfo_resp.json()
+            email = userinfo.get("email", "")
+            name = userinfo.get("name", "")
+            picture = userinfo.get("picture", "")
+            google_id = userinfo.get("sub", "")
+            username = email.split("@")[0]
+
+            result = authenticate_oauth(username, email, name, "google", google_id)
+
+            if result.get("success") and result.get("user"):
+                user = result["user"]
+                if picture:
+                    user["avatar_url"] = picture
+
+                user_json = urllib.parse.quote(json.dumps(user))
+                return RedirectResponse(
+                    url=f"/?auth=success&user={user_json}"
+                )
+            else:
+                error_msg = result.get("error", "Account creation failed")
+                return RedirectResponse(
+                    url=f"/?auth=error&message={urllib.parse.quote(error_msg)}"
+                )
+
+    except Exception as e:
+        return RedirectResponse(
+            url=f"/?auth=error&message={urllib.parse.quote(str(e)[:100])}"
+        )
 
 
 @app.get("/api/user/{user_id}")
