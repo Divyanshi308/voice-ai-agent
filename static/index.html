@@ -2470,6 +2470,15 @@
                 font-size: 13px;
             }
 
+            .live-transcription {
+                max-width: 100%;
+                padding: 12px 16px;
+            }
+
+            .live-transcription-text {
+                font-size: 14px;
+            }
+
             .chat-voice-area {
                 padding: 12px 16px;
             }
@@ -2812,6 +2821,11 @@
             .voice-mode-area {
                 padding: 12px 16px;
                 gap: 10px;
+            }
+
+            .live-transcription {
+                padding: 10px 14px;
+                max-width: 100%;
             }
 
             .mic-btn {
@@ -3182,6 +3196,110 @@
             font-style: italic;
         }
 
+        /* ============================================
+           LIVE TRANSCRIPTION DISPLAY
+           ============================================ */
+        .live-transcription {
+            display: none;
+            max-width: 520px;
+            width: 100%;
+            text-align: center;
+            padding: 14px 24px;
+            background: rgba(0, 245, 255, 0.04);
+            border: 1px solid rgba(0, 245, 255, 0.1);
+            border-radius: var(--radius-lg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            min-height: 48px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .live-transcription.active {
+            display: block;
+            animation: transcriptionFadeIn 0.3s ease;
+        }
+
+        .live-transcription.interim {
+            border-color: rgba(0, 245, 255, 0.2);
+            background: rgba(0, 245, 255, 0.06);
+        }
+
+        .live-transcription.final {
+            border-color: rgba(0, 245, 255, 0.35);
+            background: rgba(0, 245, 255, 0.08);
+        }
+
+        .live-transcription.active::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 245, 255, 0.03), transparent);
+            animation: scanLine 2.5s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes scanLine {
+            from { left: -100%; }
+            to { left: 100%; }
+        }
+
+        @keyframes transcriptionFadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .live-transcription-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .live-transcription-label::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--primary);
+            animation: pulse 1.5s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+
+        .live-transcription-text {
+            font-size: 15px;
+            color: var(--text);
+            line-height: 1.5;
+            min-height: 22px;
+            word-wrap: break-word;
+        }
+
+        .live-transcription-text.interim {
+            color: var(--text-dim);
+            font-style: italic;
+        }
+
+        .live-transcription-text.final {
+            color: var(--text);
+            font-style: normal;
+        }
+
+        .live-transcription-placeholder {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
         /* Voice chat input area (hidden in voice mode) */
         .chat-input-area.voice-hidden {
             display: none;
@@ -3510,6 +3628,12 @@
                                 <line x1="8" y1="23" x2="16" y2="23"/>
                             </svg>
                         </button>
+                        <div class="live-transcription" id="liveTranscription">
+                            <div class="live-transcription-label">Listening</div>
+                            <div class="live-transcription-text" id="liveTranscriptionText">
+                                <span class="live-transcription-placeholder">Speak to see live transcription...</span>
+                            </div>
+                        </div>
                         <div class="voice-info-row">
                             <span class="mic-label" id="micLabel">Tap the mic to start speaking</span>
                             <span class="confidence-badge hidden" id="confidenceBadge">
@@ -5624,6 +5748,7 @@
                 voiceArea.classList.remove('active');
                 toggleBtn.classList.remove('active');
                 badge.classList.remove('active');
+                hideLiveTranscription();
                 if (isRecording) {
                     stopAgoraVoiceChat();
                 }
@@ -5692,6 +5817,7 @@
                 isRecording = true;
                 micLabel.textContent = 'Listening... Tap to stop';
                 transcript.innerHTML = '<span class="voice-transcript-placeholder">Speak now - AI is listening</span>';
+                showLiveTranscription();
 
                 if (agoraVoiceSessionId) {
                     appendMessage('assistant', 'Voice chat started. Speak naturally - I can hear you!');
@@ -5703,6 +5829,7 @@
                 micBtn.classList.remove('recording');
                 micLabel.classList.remove('recording');
                 visualizer.classList.remove('active');
+                hideLiveTranscription();
                 transcript.innerHTML = '<span class="voice-transcript-placeholder">Tap the microphone to start speaking</span>';
                 showToast('Voice chat failed: ' + err.message + '. Make sure microphone access is allowed.', 'error');
             });
@@ -5788,6 +5915,7 @@
             micLabel.classList.remove('recording');
             micLabel.textContent = 'Tap the mic to start speaking';
             visualizer.classList.remove('active');
+            hideLiveTranscription();
 
             if (agoraClient && agoraJoined) {
                 agoraClient.leave().then(function() {
@@ -5888,8 +6016,10 @@
 
                 if (final) {
                     transcriptEl.innerHTML = '<span class="voice-transcript-text">' + escapeHtml(final) + '</span>';
+                    updateLiveTranscription(final, true);
                 } else if (interim) {
                     transcriptEl.innerHTML = '<span class="voice-transcript-text" style="opacity:0.7">' + escapeHtml(interim) + '</span>';
+                    updateLiveTranscription(interim, false);
                 }
 
                 if (final && voiceWebSocket && voiceWebSocket.readyState === WebSocket.OPEN) {
@@ -5971,6 +6101,12 @@
                 if (data.text) {
                     transcriptEl.innerHTML = '<span class="voice-transcript-text">' + escapeHtml(data.text) + '</span>';
                 }
+                updateLiveTranscription(data.text || '', true);
+            }
+
+            if (data.type === 'transcription') {
+                var isFinal = data.is_final || data.isFinal || false;
+                updateLiveTranscription(data.text || '', isFinal);
             }
 
             if (data.type === 'assistant_text' || data.type === 'response' || data.type === 'text') {
@@ -6000,6 +6136,53 @@
                         currentSessionId, 'user', data.text
                     );
                 }
+            }
+        }
+
+        /* ============================================
+           UPDATE LIVE TRANSCRIPTION DISPLAY
+           ============================================ */
+        function updateLiveTranscription(text, isFinal) {
+            var liveEl = document.getElementById('liveTranscription');
+            var textEl = document.getElementById('liveTranscriptionText');
+            if (!liveEl || !textEl) return;
+
+            liveEl.classList.add('active');
+
+            if (isFinal && text) {
+                liveEl.classList.remove('interim');
+                liveEl.classList.add('final');
+                textEl.className = 'live-transcription-text final';
+                textEl.textContent = text;
+            } else if (text) {
+                liveEl.classList.remove('final');
+                liveEl.classList.add('interim');
+                textEl.className = 'live-transcription-text interim';
+                textEl.textContent = text;
+            } else {
+                liveEl.classList.remove('final', 'interim');
+                textEl.className = 'live-transcription-text';
+                textEl.innerHTML = '<span class="live-transcription-placeholder">Listening...</span>';
+            }
+        }
+
+        function showLiveTranscription() {
+            var liveEl = document.getElementById('liveTranscription');
+            var textEl = document.getElementById('liveTranscriptionText');
+            if (liveEl) {
+                liveEl.classList.add('active');
+                liveEl.classList.remove('final', 'interim');
+            }
+            if (textEl) {
+                textEl.className = 'live-transcription-text';
+                textEl.innerHTML = '<span class="live-transcription-placeholder">Listening...</span>';
+            }
+        }
+
+        function hideLiveTranscription() {
+            var liveEl = document.getElementById('liveTranscription');
+            if (liveEl) {
+                liveEl.classList.remove('active', 'final', 'interim');
             }
         }
 

@@ -205,7 +205,39 @@ class AgoraVoiceManager:
                 DeepgramSTT(
                     model="nova-2",
                     smart_format=True,
+                    punctuation=True,
+                    additional_params={
+                        "endpointing": 150,
+                        "utterance_end_ms": 1000,
+                        "vad_events": True,
+                    },
                 )
+            )
+
+            agent = agent.with_interruption(
+                {
+                    "enable": True,
+                    "mode": "start_of_speech",
+                }
+            )
+
+            agent = agent.with_turn_detection(
+                {
+                    "start_of_speech": {
+                        "mode": "vad",
+                        "vad_config": {
+                            "interrupt_duration_ms": 500,
+                            "speaking_interrupt_duration_ms": 300,
+                            "prefix_padding_ms": 300,
+                        },
+                    },
+                    "end_of_speech": {
+                        "mode": "vad",
+                        "vad_config": {
+                            "silence_duration_ms": 800,
+                        },
+                    },
+                }
             )
 
             from agora_agent import expires_in_hours

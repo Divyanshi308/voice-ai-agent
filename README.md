@@ -1,163 +1,275 @@
+<div align="center">
+
 # Kataru (語る)
 
-**AI That Speaks, Listens, and Cares**
+**Build AI That Speaks, Listens, and Acts**
 
-*語る means "to speak" or "to tell a story" in Japanese*
-
-Built for the [EchoSphere: Agora Conversational AI Hackathon 2026](https://unstop.com/hackathons/echosphere-agora-conversational-ai-hackathon-knotic-1723695)
+*語る — Japanese for "to speak" / "to tell a story"*
 
 ---
 
-## Problem
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Agora](https://img.shields.io/badge/Agora%20ConvoAI-SDK-blue?style=for-the-badge)](https://www.agora.io)
+[![Groq](https://img.shields.io/badge/Groq-LLM-FF6B00?style=for-the-badge)](https://groq.com)
+[![Deepgram](https://img.shields.io/badge/Deepgram-STT-1E3A5F?style=for-the-badge)](https://deepgram.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-In India, over 150 million elderly people live alone or with aging spouses. They struggle with:
-- **Medicine management** - Forgetting to take medications on time
-- **Daily tasks** - Difficulty with grocery shopping, bill payments, appointments
-- **Emergency situations** - No one to call when they need immediate help
-- **Loneliness** - Lack of companionship and social interaction
+*Real-time multilingual voice AI for customer assistance and non-clinical support*
 
-Existing solutions are either expensive human caregivers or basic reminder apps that can't hold real conversations.
+**[Live Demo](https://voice-ai-agent-37b8.onrender.com)** · Built for [EchoSphere by KNOTiC](https://knotichq.com) · PS51
 
-## Solution
+</div>
 
-Kataru is a multilingual voice AI agent that:
-- **Speaks naturally** in Hindi, English, or Hinglish
-- **Remembers** your medications, appointments, and preferences
-- **Detects emergencies** and provides immediate guidance
-- **Adapts** its voice tone based on your emotional state
-- **Interrupts gracefully** - you can barge in anytime
+---
+
+## The Problem
+
+India has 600M+ phone-only users who call support lines daily. They face:
+
+- **Language barriers** — Hindi speakers forced through English-only IVR menus
+- **Lost context** — every call starts from zero; no memory of prior conversations
+- **Emotional distress** — stressed callers get robotic, tone-deaf responses
+- **No escalation path** — AI either solves it perfectly or fails completely
+- **Code-switching** — real users mix Hindi and English mid-sentence ("Haan, I understand the billing issue")
+
+Existing solutions are expensive human-only call centers or rigid chatbots that can't hold a real conversation.
+
+## The Solution
+
+Kataru is a **real-time multilingual voice AI agent** that handles the full call lifecycle — from greeting to resolution — in Hindi, English, or Hinglish. It detects emotion, follows a structured conversation flow, creates support tickets, escalates with full context, and never crosses safety boundaries.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────┐     ┌──────────┐     ┌──────────────┐     ┌─────────┐
-│   Elderly   │────▶│  Agora   │────▶│   Agora      │────▶│  GPT-4o │
-│   User      │◀────│   RTC    │◀────│   ConvoAI    │◀────│   LLM   │
-│   (Voice)   │     │   SDK    │     │   Engine     │     │         │
-└─────────────┘     └──────────┘     └──────────────┘     └─────────┘
-                           │                  │
-                           │                  │
-                     ┌─────┴──────┐     ┌─────┴──────┐
-                     │  Deepgram  │     │ ElevenLabs │
-                     │  STT       │     │  TTS       │
-                     └────────────┘     └────────────┘
+                          ┌──────────────────────────────────────────────┐
+                          │              Kataru (語る)                    │
+                          │         Real-Time Voice AI Agent             │
+                          └──────────────────────────────────────────────┘
+
+  ┌────────────┐    ┌─────────────┐    ┌──────────────┐    ┌─────────────┐
+  │   Caller   │◄──►│  Agora RTC  │◄──►│   Agora      │◄──►│   Groq      │
+  │  (Phone /  │    │   SDK       │    │   ConvoAI    │    │   LLM       │
+  │  Browser)  │    │  Real-time  │    │   Engine     │    │  (Response  │
+  │            │    │  Audio      │    │  Orchestrator│    │   Gen)      │
+  └────────────┘    └──────┬──────┘    └──────┬───────┘    └──────┬──────┘
+                           │                   │                    │
+                           │            ┌──────┴───────┐    ┌──────┴──────┐
+                           │            │   Deepgram   │    │   MiniMax   │
+                           │            │    STT       │    │    TTS      │
+                           │            │  (Speech →   │    │  (Text →    │
+                           │            │    Text)     │    │    Speech)  │
+                           │            └──────────────┘    └─────────────┘
+                           │
+                    ┌──────┴──────────────────────────────────┐
+                    │           FastAPI Backend                │
+                    │  ┌──────────┐ ┌──────────┐ ┌─────────┐ │
+                    │  │ Guardrails│ │ Dialogue │ │Ticketing│ │
+                    │  │ (Safety) │ │ (Flow)   │ │(Zendesk)│ │
+                    │  └──────────┘ └──────────┘ └─────────┘ │
+                    │  ┌──────────┐ ┌──────────┐ ┌─────────┐ │
+                    │  │ Analytics│ │Research  │ │  Auth   │ │
+                    │  │ (Metrics)│ │(Web Srch)│ │(OAuth2) │ │
+                    │  └──────────┘ └──────────┘ └─────────┘ │
+                    └──────────────────┬──────────────────────┘
+                                       │
+                              ┌────────┴────────┐
+                              │     SQLite      │
+                              │  (Users, Chat,  │
+                              │   Tickets,      │
+                              │   Analytics)    │
+                              └─────────────────┘
 ```
 
 ### How It Works
 
-1. **User speaks** into their phone/device
-2. **Agora RTC** captures audio with low latency (<500ms)
+1. **Caller speaks** into their phone or browser
+2. **Agora RTC** streams audio with ultra-low latency (<500ms)
 3. **Agora ConvoAI Engine** orchestrates the pipeline:
-   - Deepgram converts speech to text
-   - GPT-4o generates appropriate response
-   - ElevenLabs converts text to natural speech
-4. **Response streams** back through Agora RTC
-5. **Total latency**: <800ms end-to-end
-
-### Key Agora Features Used
-
-| Feature | Purpose |
-|---------|---------|
-| **Agora ConvoAI Engine** | Orchestrates STT → LLM → TTS pipeline |
-| **Agora RTC SDK** | Real-time audio streaming |
-| **Interruption Detection** | User can barge in while AI speaks |
-| **Turn Detection** | Knows when user starts/stops speaking |
-| **Multilingual STT** | Hindi + English + Hinglish recognition |
+   - Deepgram converts speech to text (Hindi/English/Hinglish)
+   - Groq LLM generates an emotionally-aware, context-preserved response
+   - MiniMax converts text to natural speech
+4. **Guardrails** check the response for safety boundaries in real-time
+5. **Response streams** back through Agora RTC
+6. **Full context** is preserved — caller never repeats themselves
 
 ---
 
 ## Features
 
-### Voice Features
-- **Real-time conversation** via Agora Conversational AI
-- **Interruption handling** - barge in anytime
-- **Streaming response** - AI speaks while generating
-- **Multilingual** - Hindi, English, Hinglish
-- **Natural voice** - ElevenLabs emotional TTS
+### Multilingual Intelligence
+- **Hindi / English / Hinglish** — matches caller's language automatically
+- **Code-switching** — handles "Haan, I understand the billing issue" seamlessly
+- **Respectful tone** — uses "aap" (formal Hindi), never "tum"
+- **Language detection** — identifies script and vocabulary patterns in real-time
 
-### Safety Features
-- **Emergency detection** - Auto-provides emergency numbers
-- **Medicine reminders** - Tracks medication schedules
-- **Guardrails** - Blocks harmful advice
-- **Human escalation** - Transfers to real person when needed
+### Guided Conversation Flow
+- **8-phase structured flow** — Greeting → Name → Issue → Details → Confirmation → Resolution → Escalation → Farewell
+- **Info collection** — name, phone, issue type, urgency, location
+- **Confirmation loop** — repeats collected info back and asks "Is this correct?"
 
-### Intelligence Features
-- **Context memory** - Remembers conversation history
-- **Sentiment analysis** - Detects emotional state
-- **Intent classification** - Understands what user wants
-- **Confidence tracking** - Knows when audio is unclear
+### Emotion-Aware Responses
+- Detects **angry, anxious, confused, urgent, calm** emotional states
+- Adapts tone, pacing, and word choice per emotion
+- Acknowledges feelings before solving problems
+
+### Ticketing System
+- Creates support tickets with full conversation context
+- Priority assignment based on urgency and escalation triggers
+- Status tracking (open → escalated → resolved)
+
+### Escalation with Context Preservation
+- Transfers to human specialist with complete call summary
+- **Smart callbacks** — offers to schedule a callback at the caller's preferred time
+- Includes: name, issue, emotion detected, language, and all collected info
+
+### Safety Guardrails
+- **Medical** — blocks diagnoses, redirects to emergency services (108/112)
+- **Legal** — refuses legal advice, suggests consulting a lawyer
+- **Financial** — refuses investment advice, suggests certified advisors
+- **Emergency** — auto-detects and immediately provides 112 / 100 / 108
+
+### Real-Time Analytics Dashboard
+- Active session count and call metrics
+- Language distribution and emotion breakdown
+- Escalation rates and resolution times
+- Live conversation monitoring
+
+### Authentication
+- **Google OAuth 2.0** — one-click sign-in
+- **Local accounts** — email/password signup
+- **Session persistence** — chat history preserved across sessions
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Frontend** | HTML5, JavaScript, Three.js | 3D interactive dashboard with voice UI |
+| **Backend** | Python 3.11+, FastAPI | REST API, WebSocket, session management |
+| **Voice** | Agora RTC + ConvoAI SDK | Real-time audio streaming & pipeline orchestration |
+| **LLM** | Groq (compound-mini) | Ultra-fast response generation (<100ms) |
+| **STT** | Deepgram (nova-3) | Multilingual speech-to-text (Hindi/English) |
+| **TTS** | MiniMax | Natural multilingual text-to-speech |
+| **Database** | SQLite | Users, chat history, tickets, analytics |
+| **Auth** | Google OAuth 2.0 | One-click sign-in |
+| **Hosting** | Render | Cloud deployment |
 
 ---
 
 ## Quick Start
 
-### 1. Clone
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/Divyanshi308/voice-ai-agent.git
 cd voice-ai-agent
 ```
 
-### 2. Install
+### 2. Create a virtual environment and install dependencies
 
 ```bash
 python -m venv venv
-venv\Scripts\activate  # Windows
+venv\Scripts\activate       # Windows
+source venv/bin/activate    # macOS/Linux
 pip install -r requirements.txt
 ```
 
-### 3. Configure
+### 3. Configure environment variables
 
-Copy `.env.example` to `.env` and add your API keys:
+Create a `.env` file in the project root:
 
 ```env
-# REQUIRED - Agora Conversational AI
+# === REQUIRED ===
 AGORA_APP_ID=your_agora_app_id
 AGORA_APP_CERTIFICATE=your_agora_app_certificate
+GROQ_API_KEY=your_groq_api_key
 
-# Optional - BYOK (Bring Your Own Keys)
+# === OPTIONAL (BYOK — Bring Your Own Keys) ===
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+DEEPGRAM_API_KEY=your_deepgram_api_key
+ELEVENLABS_API_KEY=your_elevenlabs_api_key
 OPENAI_API_KEY=your_openai_key
-ELEVENLABS_API_KEY=your_elevenlabs_key
-DEEPGRAM_API_KEY=your_deepgram_key
 ```
 
-### 4. Run
+### 4. Run the server
 
 ```bash
 python main.py
 ```
 
-Open http://localhost:8000
+Open [http://localhost:8000](http://localhost:8000) in your browser.
 
 ---
 
-## Demo
+## Live Demo
 
-**Live Demo:** https://kataru-voice.onrender.com
+| | |
+|---|---|
+| **URL** | [https://voice-ai-agent-37b8.onrender.com](https://voice-ai-agent-37b8.onrender.com) |
+| **Username** | `demo` |
+| **Password** | `demo123` |
 
 ### What to Try
 
-1. **Click "Start Voice Session"** → Start a voice conversation
-2. **Say "Namaste"** → AI responds in Hindi
-3. **Say "I need my medicine"** → AI helps with medicine reminder
-4. **Interrupt the AI** → It stops and listens (barge-in)
-5. **Switch languages** → AI follows your language choice
+1. **Start a voice session** — click the microphone button
+2. **Say "Namaste"** — AI responds in Hindi
+3. **Switch to English mid-sentence** — AI follows your language
+4. **Interrupt the AI** — it stops and listens (barge-in)
+5. **Say "I need help with my electricity bill"** — guided flow kicks in
+6. **Check the dashboard** — real-time analytics update live
 
 ---
 
-## Tech Stack
+## API Endpoints
 
-```
-Frontend:  HTML5, CSS3, JavaScript, Three.js
-Backend:   Python 3.11+, FastAPI
-Voice:     Agora Conversational AI Engine
-STT:       Deepgram (via Agora)
-LLM:       OpenAI GPT-4o
-TTS:       ElevenLabs (via Agora)
-Hosting:   Render (free tier)
-```
+### Authentication
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/auth/signup` | Create a new account |
+| `POST` | `/api/auth/login` | Email/password login |
+| `POST` | `/api/auth/google` | Google OAuth sign-in |
+| `GET`  | `/api/auth/google/redirect` | Redirect to Google OAuth |
+
+### Voice
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/voice/session` | Create a voice session |
+| `POST` | `/api/voice/text` | Send text to voice pipeline |
+| `WS`   | `/ws/voice` | WebSocket for real-time voice |
+| `POST` | `/api/voice/interrupt/{session_id}` | Handle interruption |
+| `POST` | `/api/voice/end/{session_id}` | End voice session |
+
+### Agora
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET`  | `/api/agora/token` | Generate RTC token |
+| `GET`  | `/api/agora/config` | Check Agora configuration |
+| `POST` | `/api/agora/voice/start` | Start Agora voice session |
+| `POST` | `/api/agora/voice/end/{session_id}` | End Agora voice session |
+
+### Tickets & Support
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/tickets/create` | Create support ticket |
+| `POST` | `/api/tickets/escalate` | Escalate to human |
+| `POST` | `/api/tickets/{ticket_id}/resolve` | Resolve ticket |
+| `GET`  | `/api/tickets/{user_id}` | Get user tickets |
+| `POST` | `/api/callbacks/schedule` | Schedule a callback |
+
+### User & Analytics
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET`  | `/api/user/{user_id}` | Get user profile + stats |
+| `PUT`  | `/api/user/{user_id}` | Update user profile |
+| `GET`  | `/api/user/{user_id}/chats` | Get chat history |
+| `GET`  | `/api/analytics` | Get analytics dashboard data |
+| `GET`  | `/health` | Health check with uptime |
+| `GET`  | `/metrics` | Active session count |
 
 ---
 
@@ -165,75 +277,69 @@ Hosting:   Render (free tier)
 
 ```
 voice-ai-agent/
-├── main.py                 # FastAPI server + Agora integration
-├── config.py               # Pydantic settings
+├── main.py                 # FastAPI app, routes, SmartAgent chatbot
+├── config.py               # Pydantic settings (env vars)
+├── voice_pipeline.py       # Conversation state machine & voice flow
+├── voice_manager.py        # Agora ConvoAI SDK integration
+├── pipeline.py             # Audio pipeline: STT → LLM → TTS orchestration
+├── asr.py                  # Deepgram speech-to-text streaming
+├── tts.py                  # ElevenLabs text-to-speech streaming
+├── llm.py                  # OpenAI/Groq LLM engine
+├── guardrails.py           # Safety boundary enforcement
+├── dialogue.py             # Dialogue state & field collection manager
+├── ticketing.py            # Zendesk ticket management
+├── notifications.py        # Twilio SMS notifications
+├── analytics.py            # PostgreSQL analytics logger
+├── research.py             # Web search engine (DuckDuckGo/Brave)
+├── database.py             # SQLite: users, chats, tickets, context
 ├── static/
-│   └── index.html          # 3D dashboard with voice interface
+│   └── index.html          # Frontend: 3D dashboard with voice UI
+├── tests/                  # Test suite
 ├── requirements.txt        # Python dependencies
 ├── Dockerfile              # Container build
-├── README.md               # This file
+├── docker-compose.yml      # Multi-service orchestration
+├── railway.json            # Railway deployment config
+├── nixpacks.toml           # Nixpacks build config
+├── kataru.db               # SQLite database (auto-created)
 └── .env                    # Environment variables (not committed)
 ```
 
 ---
 
-## How Agora Is Used
+## Project Name
 
-### Primary Platform: Agora Conversational AI Engine
+**Kataru (語る)** — Japanese for "to speak" or "to tell a story"
 
-Kataru uses **Agora Conversational AI** as the primary voice platform, not just as an RTC layer. The entire STT → LLM → TTS pipeline is orchestrated by Agora's engine.
-
-### Integration Flow
-
-```python
-from agora_agent import Agent, Agora, Area, DeepgramSTT, OpenAI, ElevenLabsTTS
-
-# Create Agora client
-client = Agora(area=Area.US, app_id="...", app_certificate="...")
-
-# Build agent with vendors
-agent = Agent(client=client).with_stt(
-    DeepgramSTT(model="nova-3", language="multi")
-).with_llm(
-    OpenAI(model="gpt-4o-mini", system_messages=[...])
-).with_tts(
-    ElevenLabsTTS(key="...", voice_id="rachel")
-)
-
-# Start session
-session = agent.create_session(channel="...", agent_uid="1")
-session.start()
-```
-
-### Why Agora?
-
-1. **Single SDK** - Handles STT, LLM, TTS orchestration
-2. **Low latency** - <800ms end-to-end
-3. **Built-in interruption** - No custom code needed
-4. **Multilingual** - Native support for Hindi/English
-5. **Scalable** - Enterprise-grade infrastructure
+The name reflects the project's core mission: giving voice to people who need help, and letting them tell their story to an AI that actually listens and remembers.
 
 ---
 
-## Known Limitations
+## The Hackathon
 
-- Free tier has 300-second call limit
-- Requires microphone permission in browser
-- Voice quality depends on network latency
-- Agora free tier has limited concurrent users
+Built for **[EchoSphere 2026](https://unstop.com/hackathons/echosphere-agora-conversational-ai-hackathon-knotic-1723695)** — a conversational AI hackathon by **KNOTiC**, tackling **PS51**: Real-time multilingual voice AI for customer assistance.
 
 ---
 
 ## Acknowledgments
 
-- [Agora](https://www.agora.io) for Conversational AI Platform
-- [OpenAI](https://openai.com) for GPT-4o
-- [ElevenLabs](https://elevenlabs.io) for Natural TTS
-- [Deepgram](https://deepgram.com) for Speech-to-Text
-- [KNOTiC](https://knotichq.com) for organizing EchoSphere 2026
+| Service | Role |
+|---------|------|
+| [Agora](https://www.agora.io) | ConvoAI SDK — voice pipeline orchestration |
+| [Groq](https://groq.com) | Ultra-fast LLM inference |
+| [Deepgram](https://deepgram.com) | Multilingual speech-to-text |
+| [MiniMax](https://www.minimaxi.com) | Natural text-to-speech |
+| [KNOTiC](https://knotichq.com) | Hackathon organizer |
 
 ---
 
 ## License
 
 MIT
+
+---
+
+<div align="center">
+
+**Kataru (語る)** — *Build AI That Speaks, Listens, and Acts*
+
+</div>
