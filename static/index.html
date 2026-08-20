@@ -6167,7 +6167,7 @@
             if (savedUser) {
                 try {
                     var user = JSON.parse(savedUser);
-                    if (user && user.user_id) {
+                    if (user && (user.id || user.user_id)) {
                         loginUser(user);
                         return;
                     }

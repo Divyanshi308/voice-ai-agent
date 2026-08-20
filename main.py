@@ -277,7 +277,8 @@ async def google_callback(code: str = None, error: str = None):
                 if picture:
                     user["avatar_url"] = picture
 
-                user_json = urllib.parse.quote(json.dumps(user))
+                safe_user = {k: v for k, v in user.items() if k != "password_hash"}
+                user_json = urllib.parse.quote(json.dumps(safe_user))
                 return RedirectResponse(
                     url=f"/?auth=success&user={user_json}"
                 )
