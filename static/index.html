@@ -5799,6 +5799,9 @@
             })
             .then(function(r) { return r.json(); })
             .then(function(data) {
+                if (!data.success && data.configured === false) {
+                    throw new Error('Voice AI not configured on server. Please contact admin.');
+                }
                 if (!data.success) {
                     throw new Error(data.error || 'Failed to start voice session');
                 }
@@ -5875,6 +5878,10 @@
 
                 agoraClient.on('connection-state-change', function(curState, prevState) {
                     console.log('Connection state:', prevState, '->', curState);
+                    if (curState === 'DISCONNECTED' && prevState !== 'DISCONNECTED') {
+                        showToast('Connection lost. Please try again.', 'warning');
+                        stopAgoraVoiceChat();
+                    }
                 });
 
                 agoraClient.join(appId, channelName, null, null)

@@ -1,123 +1,98 @@
-# VoiceShield AI - Demo Video Script
-**EchoSphere 2026 - Agora Conversational AI Hackathon**
+# Kataru Demo Script (3 Minutes)
+
+## Setup
+- Open https://voice-ai-agent-37b8.onrender.com
+- Login with: `demo` / `demo123`
+- Click the microphone button to start voice chat
+- Have a quiet environment for clean audio
 
 ---
 
-## Video Structure (3-5 minutes)
+## Minute 1: Multilingual + Code-Switching + Info Collection
 
-### Part 1: Problem (0:00 - 0:30)
+**[0:00] GREETING (Hindi)**
+> Say: "Namaste"
 
-**[Screen: Show frustrated customer on phone]**
+AI responds in Hindi: "Namaste! Main Kataru hoon..."
 
-**Narration:**
-"Every day, millions of customers call support lines and face long waits, language barriers, and inconsistent service. In India alone, 67% of customers abandon calls due to poor experience. Existing solutions are either expensive human-only systems or basic chatbots that can't handle real conversations."
+**[0:10] NAME COLLECTION**
+> Say: "Mera naam Rahul hai"
 
-**[Text on screen: "67% Abandonment Rate"]**
+AI acknowledges and asks about the issue.
 
----
+**[0:20] ISSUE + CODE-SWITCHING (Hindi → English)**
+> Say: "Mera electricity bill bahut zyada aaya hai. Last month it was 2000 but this month it shows 5000"
 
-### Part 2: Solution (0:30 - 1:00)
+Notice: AI switches to English when you switch. It identifies the issue type (billing).
 
-**[Screen: VoiceShield AI logo animation]**
+**[0:40] DETAILS COLLECTION**
+> Say: "It happened in the January bill. My account number is 12345. I live in Delhi."
 
-**Narration:**
-"Introducing VoiceShield AI - a real-time multilingual voice agent that speaks your language, remembers your conversation, and takes action. Built with Agora's Conversational AI platform, it handles interruptions naturally, detects sentiment, and escalates to humans when needed."
-
-**[Text on screen: "VoiceShield AI - Your Voice, Understood"]**
-
----
-
-### Part 3: Live Demo - Voice Conversation (1:00 - 2:30)
-
-**[Screen: Dashboard with voice button]**
-
-**Narration:**
-"Let me show you how it works. I'll start a voice conversation."
-
-**[Action: Click microphone button]**
-
-**User (Demo):**
-"Hello, I need help with my bill. It's too high this month."
-
-**AI Response (Voice):**
-"I understand, let me help you right away... I can see you're concerned about your bill. Can you tell me your account number?"
-
-**[Text on screen: Shows real-time transcript]**
-
-**Narration:**
-"Notice how the AI responds with empathy and asks for details. Let me interrupt it."
-
-**[Action: Interrupt AI while speaking]**
-
-**User (Demo):**
-"Wait, my name is Rahul."
-
-**AI Response (Voice):**
-"Got it, Rahul. What's your account number?"
-
-**[Text on screen: Shows interruption indicator in red]**
-
-**Narration:**
-"The AI stopped immediately when I spoke - that's interruption handling. It also remembered my name from earlier."
+AI collects: date, account, location.
 
 ---
 
-### Part 4: Features Showcase (2:30 - 3:30)
+## Minute 2: Confirmation + Interruption + Emotion
 
-**[Screen: Show feature cards]**
+**[1:00] CONFIRMATION**
+AI repeats back all collected info: "Let me confirm: Name is Rahul, issue is billing, electricity bill jumped from 2000 to 5000 in January, account 12345, Delhi. Is this correct?"
 
-**Narration:**
-"VoiceShield AI includes 12 winning features:
+> Say: "Haan, correct hai"
 
-1. Real-time voice conversation via Agora RTC
-2. Interruption handling (barge-in)
-3. Streaming response
-4. Instant acknowledgments
-5. Backchanneling
-6. Context memory
-7. Emotional voice adaptation
-8. Multilingual support
-9. Safety guardrails
-10. Emergency detection
-11. Ticketing integration
-12. SMS notifications"
+**[1:20] INTERRUPTION HANDLING**
+While AI is speaking, interrupt:
+> Say: "Ruko ruko, ek aur cheez — last week bhi maine complaint ki thi but koi response nahi mila"
 
-**[Screen: Show architecture diagram]**
+AI stops talking immediately and acknowledges the interruption: "Main sun rahi hoon. Bataiye."
 
-**Narration:**
-"The architecture uses Agora's Conversational AI Engine to orchestrate STT, LLM, and TTS in real-time. Audio flows through Agora RTC with sub-800ms latency."
+**[1:40] ANGRY EMOTION DETECTION**
+> Say: "This is terrible! I have called three times and nobody is helping. I am very frustrated with this service."
+
+Notice: AI detects angry emotion, acknowledges frustration, adapts tone.
 
 ---
 
-### Part 5: Impact & Closing (3:30 - 4:00)
+## Minute 3: Escalation + Dashboard
 
-**[Screen: Show metrics and demo link]**
+**[2:00] ESCALATION**
+> Say: "I want to speak to a human agent. This is not getting resolved."
 
-**Narration:**
-"VoiceShield AI can reduce support costs by 60% while improving customer satisfaction. It's deployed live at voice-ai-agent.onrender.com.
+AI creates a ticket and offers callback: "I will connect you with a specialist. Would you prefer a callback?"
 
-Built for EchoSphere 2026 with Agora's Conversational AI platform. Thank you."
+> Say: "Yes, schedule a callback for tomorrow at 3 PM"
 
-**[Text on screen: "VoiceShield AI - voice-ai-agent.onrender.com"]**
+**[2:20] TICKET CREATION**
+AI confirms: ticket created with full context — name, issue, emotion (angry), language (Hindi/English), callback scheduled.
+
+**[2:30] SWITCH TO DASHBOARD**
+Click "Dashboard" in the sidebar.
+Show:
+- Total tickets count
+- Escalation rate
+- Language distribution (Hindi/English)
+- Emotion breakdown (Angry detected)
+- Recent tickets list
+
+**[2:45] SWITCH TO TICKETS**
+Click "Tickets" in the sidebar.
+Show the ticket that was just created with:
+- Status: Escalated
+- Issue type: Billing
+- Language: Hindi
+- Priority: High
+
+**[3:00] END**
+"Kataru — Build AI That Speaks, Listens, and Acts."
 
 ---
 
-## Recording Instructions
+## Key Points to Highlight During Demo
 
-1. **Screen recording:** Use OBS Studio or similar
-2. **Voice recording:** Use a good microphone for narration
-3. **Demo:** Prepare a working voice conversation (requires real API keys)
-4. **Editing:** Add text overlays, transitions, and music
-
-## Key Points to Emphasize
-
-- **Agora Integration:** Primary voice platform, not just RTC
-- **Real-time Features:** Interruption handling, streaming, backchanneling
-- **Multilingual:** Hindi + English + Hinglish
-- **Action-Oriented:** Creates tickets, sends SMS, escalates to humans
-
-## Call to Action
-
-- Visit the live demo
-- Check the GitHub repository
-- Register on EchoSphere before August 25
+1. **Multilingual**: Started in Hindi, switched to English mid-sentence
+2. **Interruption handling**: AI stopped when interrupted mid-response
+3. **Emotion detection**: Detected anger, adapted response style
+4. **Information confirmation**: Repeated back all collected details
+5. **Context preservation**: Escalated with full conversation summary
+6. **Ticketing**: Created ticket with all context
+7. **Safety**: Would refuse medical/legal/emergency advice if asked
+8. **Dashboard**: Real-time analytics showing the interaction data

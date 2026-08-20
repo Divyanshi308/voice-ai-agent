@@ -1128,13 +1128,23 @@ async def agora_config():
 
 @app.post("/api/agora/voice/start")
 async def agora_voice_start(req: VoiceSessionRequest):
-    result = await agora_agent.start_voice_session(req.session_id, req.user_id)
-    return result
+    if not agora_agent.is_configured():
+        return {"error": "Agora not configured", "configured": False}
+    try:
+        result = await agora_agent.start_voice_session(req.session_id, req.user_id)
+        return result
+    except Exception as e:
+        logger.error("agora_voice_start_failed", error=str(e))
+        return {"error": str(e), "configured": True}
 
 
 @app.post("/api/agora/voice/end/{session_id}")
 async def agora_voice_end(session_id: str):
-    return await agora_agent.end_voice_session(session_id)
+    try:
+        return await agora_agent.end_voice_session(session_id)
+    except Exception as e:
+        logger.error("agora_voice_end_failed", error=str(e))
+        return {"error": str(e)}
 
 
 @app.get("/api/agora/voice/status/{session_id}")

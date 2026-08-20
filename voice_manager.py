@@ -214,6 +214,8 @@ class AgoraVoiceManager:
                 )
             )
 
+            agent = agent.with_audio_scenario("chorus")
+
             agent = agent.with_interruption(
                 {
                     "enable": True,
