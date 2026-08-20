@@ -6184,8 +6184,8 @@
         /* ============================================
            GOOGLE SIGN-IN
            ============================================ */
-        // Handled via OAuth redirect flow (see /api/auth/google/redirect in main.py)
-        // Check for auth callback on page load
+        // Check for Google OAuth callback on page load
+        var googleAuthHandled = false;
         (function checkGoogleAuth() {
             var params = new URLSearchParams(window.location.search);
             if (params.get('auth') === 'success') {
@@ -6194,7 +6194,7 @@
                     try {
                         var user = JSON.parse(decodeURIComponent(userStr));
                         localStorage.setItem('kataru_user', JSON.stringify(user));
-                        loginUser(user);
+                        googleAuthHandled = true;
                     } catch(e) {}
                 }
                 window.history.replaceState({}, document.title, '/');
@@ -6203,6 +6203,13 @@
                 window.history.replaceState({}, document.title, '/');
             }
         })();
+
+        // Initialize the app
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
 
     })();
     </script>
